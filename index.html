@@ -36,9 +36,13 @@
   .ms-btn.ms-active{border-color:#2563eb;background:#eff6ff;color:#1d4ed8}
   .dark .ms-btn{background:#1f2937;border-color:#374151;color:#d1d5db}
   .dark .ms-btn.ms-active{border-color:#3b82f6;background:#1e3a5f;color:#93c5fd}
-  .ms-panel{position:absolute;top:calc(100% + 4px);left:0;z-index:999;background:white;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.13);min-width:200px;max-width:280px;display:none;flex-direction:column}
+  .ms-panel{position:absolute;top:calc(100% + 4px);left:0;z-index:999;background:white;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.13);min-width:220px;max-width:300px;display:none;flex-direction:column}
   .dark .ms-panel{background:#1f2937;border-color:#374151}
-  .ms-list{overflow-y:auto;max-height:240px;padding:5px}
+  .ms-search{padding:7px 8px 4px}
+  .ms-search input{width:100%;padding:5px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;outline:none;background:white;color:#374151;box-sizing:border-box}
+  .ms-search input:focus{border-color:#2563eb}
+  .dark .ms-search input{background:#111827;border-color:#374151;color:#d1d5db}
+  .ms-list{overflow-y:auto;max-height:200px;padding:5px}
   .ms-option{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;color:#374151;user-select:none}
   .ms-option:hover{background:#f3f4f6}
   .dark .ms-option{color:#d1d5db}
@@ -200,27 +204,27 @@
       <!-- Multi-select dropdowns -->
       <div class="ms-wrap" id="ms-wrap-industry">
         <button class="ms-btn" id="ms-btn-industry" onclick="toggleMsPanel('industry');event.stopPropagation()">Industry <span style="color:#9ca3af;font-size:10px">▾</span></button>
-        <div class="ms-panel" id="ms-panel-industry"><div class="ms-list" id="ms-list-industry"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('industry',event)">Clear</button></div></div>
+        <div class="ms-panel" id="ms-panel-industry"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-industry" oninput="filterMsPanel('industry',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-industry"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('industry',event)">Clear</button></div></div>
       </div>
       <div class="ms-wrap" id="ms-wrap-country">
         <button class="ms-btn" id="ms-btn-country" onclick="toggleMsPanel('country');event.stopPropagation()">Country <span style="color:#9ca3af;font-size:10px">▾</span></button>
-        <div class="ms-panel" id="ms-panel-country"><div class="ms-list" id="ms-list-country"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('country',event)">Clear</button></div></div>
+        <div class="ms-panel" id="ms-panel-country"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-country" oninput="filterMsPanel('country',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-country"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('country',event)">Clear</button></div></div>
       </div>
       <div class="ms-wrap" id="ms-wrap-size">
         <button class="ms-btn" id="ms-btn-size" onclick="toggleMsPanel('size');event.stopPropagation()">Company Size <span style="color:#9ca3af;font-size:10px">▾</span></button>
-        <div class="ms-panel" id="ms-panel-size"><div class="ms-list" id="ms-list-size"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('size',event)">Clear</button></div></div>
+        <div class="ms-panel" id="ms-panel-size"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-size" oninput="filterMsPanel('size',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-size"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('size',event)">Clear</button></div></div>
       </div>
       <div class="ms-wrap" id="ms-wrap-campaign">
         <button class="ms-btn" id="ms-btn-campaign" onclick="toggleMsPanel('campaign');event.stopPropagation()">Campaign <span style="color:#9ca3af;font-size:10px">▾</span></button>
-        <div class="ms-panel" id="ms-panel-campaign"><div class="ms-list" id="ms-list-campaign"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('campaign',event)">Clear</button></div></div>
+        <div class="ms-panel" id="ms-panel-campaign"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-campaign" oninput="filterMsPanel('campaign',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-campaign"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('campaign',event)">Clear</button></div></div>
       </div>
       <div class="ms-wrap" id="ms-wrap-adset">
         <button class="ms-btn" id="ms-btn-adset" onclick="toggleMsPanel('adset');event.stopPropagation()">Ad Set <span style="color:#9ca3af;font-size:10px">▾</span></button>
-        <div class="ms-panel" id="ms-panel-adset"><div class="ms-list" id="ms-list-adset"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('adset',event)">Clear</button></div></div>
+        <div class="ms-panel" id="ms-panel-adset"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-adset" oninput="filterMsPanel('adset',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-adset"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('adset',event)">Clear</button></div></div>
       </div>
       <div class="ms-wrap" id="ms-wrap-ad">
         <button class="ms-btn" id="ms-btn-ad" onclick="toggleMsPanel('ad');event.stopPropagation()">Ad <span style="color:#9ca3af;font-size:10px">▾</span></button>
-        <div class="ms-panel" id="ms-panel-ad"><div class="ms-list" id="ms-list-ad"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('ad',event)">Clear</button></div></div>
+        <div class="ms-panel" id="ms-panel-ad"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-ad" oninput="filterMsPanel('ad',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-ad"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('ad',event)">Clear</button></div></div>
       </div>
 
       <select id="filterMinVisits" class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" onchange="applyFilters()"><option value="">Min Visits</option><option value="2">2+</option><option value="3">3+</option><option value="5">5+</option><option value="10">10+</option></select>
@@ -501,8 +505,9 @@ function toggleMsPanel(key){
   closeMsPanel();openPanel=key;
   const p=document.getElementById('ms-panel-'+key);
   if(p)p.style.display='flex';
+  setTimeout(()=>{const si=document.getElementById('ms-search-'+key);if(si)si.focus();},50);
 }
-function closeMsPanel(){if(openPanel){const p=document.getElementById('ms-panel-'+openPanel);if(p)p.style.display='none';}openPanel=null;}
+function closeMsPanel(){if(openPanel){const p=document.getElementById('ms-panel-'+openPanel);if(p)p.style.display='none';const si=document.getElementById('ms-search-'+openPanel);if(si){si.value='';filterMsPanel(openPanel,'');};}openPanel=null;}
 document.addEventListener('click',e=>{if(!e.target.closest('.ms-wrap'))closeMsPanel();});
 
 function toggleMsOpt(key,value,checked){
@@ -512,15 +517,22 @@ function toggleMsOpt(key,value,checked){
 function clearMs(key,e){if(e)e.stopPropagation();filterSel[key].clear();buildMsPanel(key,_msOpts[key]||[]);renderMsBtn(key);applyFilters();}
 
 const _msOpts={};
-function buildMsPanel(key,options){
-  _msOpts[key]=options;
+function renderMsList(key,options){
   const list=document.getElementById('ms-list-'+key);
   if(!list)return;
-  list.innerHTML=options.map(opt=>{
+  list.innerHTML=options.length?options.map(opt=>{
     const safe=opt.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
     return `<label class="ms-option"><input type="checkbox" ${filterSel[key].has(opt)?'checked':''} onchange="toggleMsOpt('${key}','${safe}',this.checked)"><span>${opt}</span></label>`;
-  }).join('');
+  }).join(''):'<p style="font-size:12px;color:#9ca3af;padding:6px 8px">No results</p>';
+}
+function buildMsPanel(key,options){
+  _msOpts[key]=options;
+  renderMsList(key,options);
   renderMsBtn(key);
+}
+function filterMsPanel(key,q){
+  const filtered=q.trim()?(_msOpts[key]||[]).filter(o=>o.toLowerCase().includes(q.toLowerCase())):(_msOpts[key]||[]);
+  renderMsList(key,filtered);
 }
 function renderMsBtn(key){
   const btn=document.getElementById('ms-btn-'+key);if(!btn)return;
