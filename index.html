@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Engagement Tracker</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .fade-in{animation:fadeIn 0.3s ease-out}
+  .tab-active{border-bottom:2px solid #2563eb;color:#2563eb}
+  .tab-inactive{border-bottom:2px solid transparent;color:#6b7280}
+  .tab-inactive:hover{color:#111827}
+  .dark .tab-active{color:#60a5fa;border-color:#60a5fa}
+  .dark .tab-inactive{color:#9ca3af}
+  .dark .tab-inactive:hover{color:#e5e7eb}
+  .bar-clickable{cursor:pointer;transition:opacity 0.15s}
+  .bar-clickable:hover{opacity:0.85}
+  .bar-dimmed{opacity:0.25}
+  .bar-active{outline:2px solid #2563eb;outline-offset:1px;border-radius:9999px}
+  .expand-row{cursor:pointer}
+  .expand-row:hover{background:rgba(59,130,246,0.04)}
+  .chevron{transition:transform 0.2s;display:inline-block}
+  .chevron-open{transform:rotate(90deg)}
+  .detail-panel{animation:fadeIn 0.2s ease-out}
+  .visit-card{border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:8px;background:white}
+  .dark .visit-card{border-color:#374151;background:#1f2937}
+  .li-card{border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:8px;background:#eff6ff}
+  .dark .li-card{border-color:#1e3a5f;background:#172554}
+  #pie-tooltip{position:fixed;display:none;z-index:200;pointer-events:none;background:white;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,0.12);max-width:260px;min-width:180px}
+  /* Multi-select */
+  .ms-wrap{position:relative;display:inline-block}
+  .ms-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;font-size:13px;border-radius:8px;border:1px solid #d1d5db;background:white;cursor:pointer;color:#374151;white-space:nowrap;line-height:1.4}
+  .ms-btn:hover{border-color:#9ca3af}
+  .ms-btn.ms-active{border-color:#2563eb;background:#eff6ff;color:#1d4ed8}
+  .dark .ms-btn{background:#1f2937;border-color:#374151;color:#d1d5db}
+  .dark .ms-btn.ms-active{border-color:#3b82f6;background:#1e3a5f;color:#93c5fd}
+  .ms-panel{position:absolute;top:calc(100% + 4px);left:0;z-index:999;background:white;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.13);min-width:200px;max-width:280px;display:none;flex-direction:column}
+  .dark .ms-panel{background:#1f2937;border-color:#374151}
+  .ms-list{overflow-y:auto;max-height:240px;padding:5px}
+  .ms-option{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;color:#374151;user-select:none}
+  .ms-option:hover{background:#f3f4f6}
+  .dark .ms-option{color:#d1d5db}
+  .dark .ms-option:hover{background:#374151}
+  .ms-option input[type=checkbox]{accent-color:#2563eb;width:14px;height:14px;flex-shrink:0;cursor:pointer}
+  .ms-footer{padding:5px 8px 7px;border-top:1px solid #f3f4f6;display:flex;justify-content:flex-end}
+  .dark .ms-footer{border-color:#374151}
+  /* Opportunity */
+  .opp-badge{display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:999px;font-size:10px;font-weight:700;padding:1px 7px;white-space:nowrap;margin-left:6px}
+  .dark .opp-badge{background:#451a03;color:#fcd34d;border-color:#92400e}
+  /* Customer */
+  .cust-badge{display:inline-flex;align-items:center;gap:3px;background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:999px;font-size:10px;font-weight:700;padding:1px 7px;white-space:nowrap;margin-left:6px}
+  .dark .cust-badge{background:#14532d;color:#86efac;border-color:#166534}
+  .cust-row{background:rgba(134,239,172,0.06)}
+  .dark .cust-row{background:rgba(20,83,45,0.15)}
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen transition-colors duration-300">
+
+<div id="pie-tooltip">
+  <div id="pie-tt-name" style="font-size:12px;font-weight:600;color:#374151;line-height:1.4;margin-bottom:4px"></div>
+  <div id="pie-tt-spend" style="font-size:20px;font-weight:700;color:#111827"></div>
+  <div id="pie-tt-pct" style="font-size:11px;color:#9ca3af;margin-top:1px"></div>
+</div>
+
+<button id="darkToggle" onclick="toggleDark()" class="fixed top-4 right-4 z-50 p-2 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 hover:scale-110 transition-transform">
+  <svg id="sunIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.66 7.66l-.71-.71M4.05 4.05l-.71-.71M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+  <svg id="moonIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+</button>
+
+<div class="bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-800 dark:to-indigo-900 text-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold">Account Engagement Tracker</h1>
+        <p class="mt-2 text-blue-100">Match ad campaigns to company-level visit and engagement data</p>
+      </div>
+      <button id="resetBtn" onclick="resetApp()" class="hidden px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors cursor-pointer">Start Over</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload -->
+<div id="uploadSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 fade-in">
+  <div class="w-full max-w-5xl mx-auto">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+      <!-- Meta Ads -->
+      <div id="metaDropZone" onclick="document.getElementById('metaInput').click()" class="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-7 text-center cursor-pointer transition-all hover:border-blue-400" ondragover="event.preventDefault();this.classList.add('border-blue-600','bg-blue-50')" ondragleave="this.classList.remove('border-blue-600','bg-blue-50')" ondrop="handleDrop(event,'meta')">
+        <input id="metaInput" type="file" accept=".csv,.tsv" class="hidden" onchange="handleFile(this,'meta')">
+        <div id="metaPlaceholder">
+          <img src="data:image/png;base64,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" class="w-11 h-11 mx-auto mb-3" style="object-fit:contain">
+          <p class="font-semibold">Meta Ads Export</p><p class="text-xs text-gray-500 mt-1">Required</p>
+        </div>
+        <div id="metaSelected" class="hidden"><svg class="w-10 h-10 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p id="metaFileName" class="font-semibold text-sm"></p><p id="metaFileSize" class="text-xs text-gray-500"></p></div>
+      </div>
+      <!-- Snitcher -->
+      <div id="snitcherDropZone" onclick="document.getElementById('snitcherInput').click()" class="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-7 text-center cursor-pointer transition-all hover:border-blue-400" ondragover="event.preventDefault();this.classList.add('border-blue-600','bg-blue-50')" ondragleave="this.classList.remove('border-blue-600','bg-blue-50')" ondrop="handleDrop(event,'snitcher')">
+        <input id="snitcherInput" type="file" accept=".csv,.tsv" class="hidden" onchange="handleFile(this,'snitcher')">
+        <div id="snitcherPlaceholder">
+          <img src="data:image/png;base64,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" class="w-11 h-11 mx-auto mb-3" style="object-fit:contain;border-radius:8px">
+          <p class="font-semibold">Snitcher Export</p><p class="text-xs text-gray-500 mt-1">Required</p>
+        </div>
+        <div id="snitcherSelected" class="hidden"><svg class="w-10 h-10 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p id="snitcherFileName" class="font-semibold text-sm"></p><p id="snitcherFileSize" class="text-xs text-gray-500"></p></div>
+      </div>
+      <!-- LinkedIn -->
+      <div id="linkedinDropZone" onclick="document.getElementById('linkedinInput').click()" class="rounded-lg border-2 border-dashed border-blue-200 dark:border-blue-800 p-7 text-center cursor-pointer transition-all hover:border-blue-400 bg-blue-50/30 dark:bg-blue-950/20" ondragover="event.preventDefault();this.classList.add('border-blue-600','bg-blue-50')" ondragleave="this.classList.remove('border-blue-600','bg-blue-50')" ondrop="handleDrop(event,'linkedin')">
+        <input id="linkedinInput" type="file" accept=".csv,.tsv" class="hidden" onchange="handleFile(this,'linkedin')">
+        <div id="linkedinPlaceholder">
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAJSElEQVR42u2de4xcVRnAf985987su9uy9EFZSnkVUhHpAynUiBB8kEqihhCVV6oxig9CQBITk/KP/wExpkSMpho0KoiaphKighqCvKQBFguYWhvo0naxW7Zddndm7j3n8487M+yW3dk7013bnb1fcjeTvSfn7vnd73zne5wzK4AACsCdj14uRm4QF69ByKPl3893EQSlqIHdqZH+gvs2PV25I2zZYuAKIyPD94gNb8WGId6BaoI2k0S9RMBYiKNIfbxVL9n0bXbdrQIgd2zfKp09X2d4UBHxaIZuCk1UUEP7KaLDg1v1vmu/Kdyx/Upjc0/gXYx6i0gGr6Y2qiLGYWzgXekqI2JuwQaASgYvjRaKgAo2QMTcYkRZndi8bNrWYRMF7xBltUHIZ0Qatol5k1E4PskAHqcEjdtSsCIo4H3ibxuTmFHv548H3hBAY4TYeVwhAiMQWlDFFVwCtyXEiuBVM4CTwitEtLXluH59L59YtZiVi1pxCrv/+y47Xh3g930HiaOYIB9UtTMDWIE3GrFxVQ8PXHcRq5d0Tri/YcVCblrXy9N7D/Plh1/mtf1HCVqaG6KpT/NiPrLqVB77yqWsXtJJ7BXnFa+KUyX2yXXZykU8cetlrFrWSVx0mCb2z1MBFAHvPN0dOR784sV05AJirwRGsEYwIlgRApNckfMs68zz089fTGgF1XmugVYEX4i5YX0vZy5sq8KbSkJrcF7ZsGIh11y4FFeIsUbmL0CvgDVsumBx6iyXkmTEPn3BkuTDfF1EBHBeybUErFjYhkg6gFKe+uf2tENom9alqSsSaWgSNnmKwqSZitZAqRjz5tAYqulmZGUK7x0chah5V+JUGmhEIPY89vrbiJA6TBOBHa8NNLUWpgLoVJF8wIPP76N/aIzACHEN5zhyySr9Qv8Qf+g7iG0JcX4e20BVCKxh8GiBzQ+9VAU03pH2mnyOvRJa4dBIiS/96iWKsWvqRHfqRcSpErSG/HnXAJt+/Cx7BkcmONJGks+BEXb2D/HxB56hb99QEg/PZzdmgj/oE4h/enWA9fc9yRfWns6nzl9M78JWnFf2HBphx64BHnppP8ViTNAaNn0yQcydO/6JDVcTRx5JGZkYIYo9FGOwgs0FqIIvxeA1SWeZJk5nKZ4gNLhoV0P5QOcVawXbnsNreZERCFvDqqaeSHgyzpU6qaZwxTUZbxeTWLkS8ml1BFIegU430JTry1TvQ8pulkjSxqnij7ln5L2QdKZfbN0AndO6VKGWA+1UqY42xZsbn48QkhSb80pUjMH5anY8KL/R2Ck+dsk9gMBicxYjzJhbFdQ7NbpaAky5FlLb+U78wdHITdmmIxcQWmG6sRiBschRirX6Urwq0UgJ0xJw+bk9XHHOKaxZvoDTF7TQkU9s8mjkGBwpsffwKDv7j/DU3sP868BRnEsWQ0WPO88RpJ22zikLWkP++rUNLO3M4/zE6XysjcwFhmfeOMxnt/0DG5gJf6gIuNjz4M1r2bBiESXnsVN0FnulNTR87/Hd/ODx3bR25hkrRBhjuHnjSr5x+Zms6+1ONdhi7HnyP4Pc/9Retr98AKwhCM1xeQr1pfQFzuhu5ZT2XKr2p3W1THt/aWe6un53S4iIMDYWsWpJBz+87iI+dk5PdbFwXqsZoGNtp5ZnTz4wXH3eqVx93qn85uX93PrIKxwaLhxX7aZuG1iMfeKyaG0NDIwkU66GlOJkCsWqU2pgpS8EdCziijXLeeimtSzuyBN7xZSn9JQJXpmY4KiAuu6i0zh/cQfX/OhZ+o8UCHK2IYh1F9ZFylvlprkq7Y63r0qbo4WYlb0L2L75kiq8oBwF1WPDbTl6ipxy4bIuHtl8CW2hAecbynmc9DsTKoNa0BrwkxvW0NUSTFtSSCOhTSB++IxuvvvJVcSFuLoxoKkAVmop39q4kivP7kkSGzNUXwnK0dJtG8/irOVdxCVHvV3Pmb0xi9py1Z22M6bdktjytpxl8/oz0AYSv3MG4GTFrPG16MpVb6Rhygniz1y4lFxbSOzq2yg5ZwCOVwxfDSHfq0VXroqTrakBJh2fv7iD1cu68HXmLwPmmHjV6qCfe+MdnnvzHQ4MF/EeTuvK89Gze/jQ8q6q25IGhfeKNcL63m5e3DOIyUNajyaYW/ASjek7cJTbf/cKf9kzCKWJoaLNB9y4rpetn/sAbWGQym5WWH1wWefsO9InWvN2HRzmqvv/zqGhAkFbDhPa90H+2d/+zWjs+PWNa5NN9dPoYeXuykXtkCI2n5M2EJIazFd/28ehIwVaOvP4SRYRVSW3sJWHn9/HH19/GyMybealoqHLuvJInZsA5gRAp0nI9uSeQZ7afYiwNUcp9lNPRwVR5ec7+98XztWMt1tD2soApZkAVhRix6sHkdhPa9O8goaGnfuOVDM9tRO7SYdtoaUltEmOUpoIYCXR8OJbR1Er0+bwVBWsYf9wgYHh4nu/SxHeJVFOE03hyio6Fjn6jxTAmFTDExFGio7B0agOX1MwdRI5+TWwTGu05BguxiAy7SlcLUcY3nvGSvEEV2U6Ta9oe1PZQICi88nCUWcsXC3hzFKJzswRBZyVitq8AHiySwYwA5gBzABmADPJAGYAM4AZwEwygBnADGAGMJMM4P9T6q4LV05r1krNpWlzbDut1YbGz2xPeIZO3YYGn1E3wFxgpt08WdklH9ra6ePQJscTghqdVbrIBY1NluozavwtMu4ZMpsAVZW3jowlxwfKh2smE+/BWqlWxKaSgeEiB4eLuPJW3Un70qRWsX+40FBWvvoMp1MWjLS8Xfndoqt5CnVS+PUc9RKgMx9Ut4RN1zbyykhp6mMO7TlLaCRVX07h3WJcN8S0z6iAHC7F00/lRo96KTA0FtU1gFrbZocL8Yz1daKeUbcNtFbqIl7rZVojdVXZGjHys/2MhlbhmRKt/pg9me1nZH5gBvDEAxzLvn62AUmYjRlF+jA22VCXSUp4qhiLon1GkW1EJUUMTf01azO3KnnEQlRSRbdZnv7lPjZc3yHtizYSFQB8edXS7DrmEpJgo73baGHsHu69dlvAli1G7772Lu561IsNb8MG+eyfEUziC1X+GYGLizoy9H29d9N36NxihPHf0XD79kslzN0oLlqX/TuMCQuGAAU1wQvq/M+5d9NzFW7/A2YvfcUIeczLAAAAAElFTkSuQmCC" class="w-11 h-11 mx-auto mb-3" style="object-fit:contain">
+          <p class="font-semibold">LinkedIn Company Export</p><p class="text-xs text-blue-500 mt-1">Optional — enables opportunity detection</p>
+        </div>
+        <div id="linkedinSelected" class="hidden"><svg class="w-10 h-10 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p id="linkedinFileName" class="font-semibold text-sm"></p><p id="linkedinFileSize" class="text-xs text-gray-500"></p></div>
+      </div>
+      <!-- HubSpot CRM -->
+      <div id="hubspotDropZone" onclick="document.getElementById('hubspotInput').click()" class="rounded-lg border-2 border-dashed border-orange-200 dark:border-orange-800 p-7 text-center cursor-pointer transition-all hover:border-orange-400 bg-orange-50/30 dark:bg-orange-950/20" ondragover="event.preventDefault();this.classList.add('border-orange-500','bg-orange-50')" ondragleave="this.classList.remove('border-orange-500','bg-orange-50')" ondrop="handleDrop(event,'hubspot')">
+        <input id="hubspotInput" type="file" accept=".csv,.tsv" class="hidden" onchange="handleFile(this,'hubspot')">
+        <div id="hubspotPlaceholder">
+
+          <p class="font-semibold">(HubSpot) CRM Export</p><p class="text-xs text-orange-500 mt-1">Optional — flags existing customers</p>
+        </div>
+        <div id="hubspotSelected" class="hidden"><svg class="w-10 h-10 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p id="hubspotFileName" class="font-semibold text-sm"></p><p id="hubspotFileSize" class="text-xs text-gray-500"></p></div>
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button id="processBtn" onclick="processFiles()" disabled class="px-8 py-3 rounded-lg font-semibold bg-gray-300 text-gray-500 cursor-not-allowed">Match Accounts</button>
+    </div>
+  </div>
+</div>
+
+<!-- Results -->
+<div id="resultsSection" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 fade-in">
+
+  <!-- Campaign Overviews (collapsible) -->
+  <div id="campaignOverviewSection" class="mb-10">
+
+    <!-- Meta Campaign Overview -->
+    <div id="metaCampaignBlock" class="mb-6">
+      <button onclick="toggleCampaignBlock('meta')" class="w-full flex items-center justify-between group mb-1">
+        <div class="flex items-center gap-3">
+          <svg id="meta-chevron" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          <h2 class="text-xl font-bold group-hover:text-blue-600 transition-colors">Meta Campaign Overview</h2>
+        </div>
+        <p id="dateRange" class="text-sm text-gray-500 dark:text-gray-400"></p>
+      </button>
+      <div id="meta-campaign-body">
+        <div id="metaStats" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6"></div>
+        <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-5">Spend by Ad</h3>
+          <div id="spendChart"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="border-gray-200 dark:border-gray-700 mb-10">
+
+  <!-- Account Overview -->
+  <div class="mb-8">
+    <h2 class="text-xl font-bold mb-1">Account Overview</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Based on the uploaded Snitcher export</p>
+    <div id="accountStats" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6"></div>
+
+    <div id="chartFilterBanner" class="hidden mb-4 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
+      <span id="chartFilterLabel" class="text-sm text-blue-700 dark:text-blue-300 font-medium"></span>
+      <button onclick="clearChartFilter()" class="px-3 py-1 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer">Remove filter</button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Accounts by Meta Ad</h3>
+        <div id="adAccountChart" class="space-y-2"></div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Accounts by Industry</h3>
+        <div id="industryChart" class="space-y-2"></div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Accounts by Company Size</h3>
+        <div id="sizeChart" class="space-y-2"></div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5" id="googleChartCard" style="display:none">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Accounts by Google Campaign</h3>
+        <div id="googleCampaignChart" class="space-y-2"></div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5" id="liChartCard" style="display:none">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Accounts by LinkedIn Campaign</h3>
+        <div id="linkedinCampaignChart" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 mr-1">Filters:</span>
+      <input id="filterSearch" type="text" placeholder="Search company…" class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-44" oninput="applyFilters()">
+
+      <!-- Multi-select dropdowns -->
+      <div class="ms-wrap" id="ms-wrap-industry">
+        <button class="ms-btn" id="ms-btn-industry" onclick="toggleMsPanel('industry');event.stopPropagation()">Industry <span style="color:#9ca3af;font-size:10px">▾</span></button>
+        <div class="ms-panel" id="ms-panel-industry"><div class="ms-list" id="ms-list-industry"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('industry',event)">Clear</button></div></div>
+      </div>
+      <div class="ms-wrap" id="ms-wrap-country">
+        <button class="ms-btn" id="ms-btn-country" onclick="toggleMsPanel('country');event.stopPropagation()">Country <span style="color:#9ca3af;font-size:10px">▾</span></button>
+        <div class="ms-panel" id="ms-panel-country"><div class="ms-list" id="ms-list-country"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('country',event)">Clear</button></div></div>
+      </div>
+      <div class="ms-wrap" id="ms-wrap-size">
+        <button class="ms-btn" id="ms-btn-size" onclick="toggleMsPanel('size');event.stopPropagation()">Company Size <span style="color:#9ca3af;font-size:10px">▾</span></button>
+        <div class="ms-panel" id="ms-panel-size"><div class="ms-list" id="ms-list-size"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('size',event)">Clear</button></div></div>
+      </div>
+      <div class="ms-wrap" id="ms-wrap-campaign">
+        <button class="ms-btn" id="ms-btn-campaign" onclick="toggleMsPanel('campaign');event.stopPropagation()">Campaign <span style="color:#9ca3af;font-size:10px">▾</span></button>
+        <div class="ms-panel" id="ms-panel-campaign"><div class="ms-list" id="ms-list-campaign"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('campaign',event)">Clear</button></div></div>
+      </div>
+      <div class="ms-wrap" id="ms-wrap-adset">
+        <button class="ms-btn" id="ms-btn-adset" onclick="toggleMsPanel('adset');event.stopPropagation()">Ad Set <span style="color:#9ca3af;font-size:10px">▾</span></button>
+        <div class="ms-panel" id="ms-panel-adset"><div class="ms-list" id="ms-list-adset"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('adset',event)">Clear</button></div></div>
+      </div>
+      <div class="ms-wrap" id="ms-wrap-ad">
+        <button class="ms-btn" id="ms-btn-ad" onclick="toggleMsPanel('ad');event.stopPropagation()">Ad <span style="color:#9ca3af;font-size:10px">▾</span></button>
+        <div class="ms-panel" id="ms-panel-ad"><div class="ms-list" id="ms-list-ad"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('ad',event)">Clear</button></div></div>
+      </div>
+
+      <select id="filterMinVisits" class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" onchange="applyFilters()"><option value="">Min Visits</option><option value="2">2+</option><option value="3">3+</option><option value="5">5+</option><option value="10">10+</option></select>
+      <button id="hideCustomersBtn" onclick="toggleHideCustomers()" class="hidden px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium">Hide customers</button>
+      <button onclick="clearAllFilters()" class="ml-auto px-3 py-1.5 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 cursor-pointer">Clear all</button>
+    </div>
+    <div id="filterSummary" class="mt-2 text-xs text-gray-500 hidden"></div>
+  </div>
+
+  <!-- Tab bar + Export -->
+  <div class="flex flex-wrap gap-3 justify-between items-center mb-6">
+    <div class="border-b border-gray-200 dark:border-gray-700"><div class="flex flex-wrap gap-1" id="tabBar"></div></div>
+    <button onclick="exportCSV()" class="px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 cursor-pointer">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Export CSV
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white dark:bg-gray-900 rounded-lg overflow-x-auto border border-gray-200 dark:border-gray-700">
+    <table class="w-full text-sm" id="resultsTable"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table>
+    <div id="pagination" class="flex items-center justify-between p-4 text-sm text-gray-600 dark:text-gray-400"></div>
+  </div>
+</div>
+
+<script>
+// ── Globals ───────────────────────────────────────────────────────────────────
+let metaFile=null,snitcherFile=null,linkedinFile=null,hubspotFile=null;
+let result={matched:[],unmatched:[],metaOverview:{}};
+let filteredMatched=[],filteredUnmatched=[];
+let excludedCompanies=new Set(),expandedRows=new Set();
+let chartFilter={type:null,value:null};
+let currentTab='matched',currentPage=0;
+const PAGE_SIZE=25;
+let adIdToMeta={};
+let adsetIdToMeta={};  // adset_id -> {adName, campaign_name, adset_name}
+let hideCustomers=false;
+// Multi-select state
+const filterSel={industry:new Set(),country:new Set(),size:new Set(),campaign:new Set(),adset:new Set(),ad:new Set()};
+let openPanel=null;
+
+// ── Column keys ───────────────────────────────────────────────────────────────
+const META={campaign_name:'Campaign name',adset_name:'Ad set name',ad_name:'Ad name',campaign_id:'Campaign ID',adset_id:'Ad set ID',ad_id:'Ad ID',reach:'Reach',impressions:'Impressions',frequency:'Frequency',spend:'Amount spent (EUR)',starts:'Reporting starts',ends:'Reporting ends',currency:'Currency'};
+const SNITCH={name:'Name',industry:'Industry',size:'Company Size',country:'Country',visits:'Total Visits',pageviews:'Total Pageviews',campaigns:'Unique Campaigns',pages:'Unique pages Visited',first_visit:'First visit',last_visit:'Last visit'};
+const LI={name:'Company Name',url:'Company Page URL',engagement_level:'Engagement Level',org_imp:'Organic Impressions',org_eng:'Organic Engagements',paid_imp:'Paid Impressions',paid_clicks:'Paid Clicks',paid_eng:'Paid Engagements',paid_conv:'Paid Conversions',paid_leads:'Paid Leads'};
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+const ICONS={
+  ig:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="display:inline;vertical-align:middle;flex-shrink:0"><defs><radialGradient id="ig1" cx="30%" cy="107%" r="150%"><stop offset="0%" stop-color="#fdf497"/><stop offset="5%" stop-color="#fdf497"/><stop offset="45%" stop-color="#fd5949"/><stop offset="60%" stop-color="#d6249f"/><stop offset="90%" stop-color="#285AEB"/></radialGradient></defs><rect width="24" height="24" rx="6" fill="url(#ig1)"/><circle cx="12" cy="12" r="4.5" stroke="white" stroke-width="1.8" fill="none"/><circle cx="17.5" cy="6.5" r="1.2" fill="white"/><rect x="3" y="3" width="18" height="18" rx="5" stroke="white" stroke-width="1.8" fill="none"/></svg>`,
+  fb:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="display:inline;vertical-align:middle;flex-shrink:0"><rect width="24" height="24" rx="6" fill="#1877F2"/><path d="M16 8h-2a1 1 0 00-1 1v2h3l-.5 3H13v7h-3v-7H8v-3h2V9a4 4 0 014-4h2v3z" fill="white"/></svg>`,
+  google:`<svg width="15" height="15" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;flex-shrink:0"><rect width="24" height="24" rx="6" fill="white" stroke="#e5e7eb"/><path d="M21.35 11.1H12v2.9h5.35c-.23 1.25-1 2.3-2.12 2.99v2.49h3.43C20.45 17.69 21.35 14.9 21.35 11.1z" fill="#4285F4"/><path d="M12 22c2.7 0 4.96-.9 6.61-2.42l-3.43-2.49c-.95.63-2.16 1-3.18 1-2.44 0-4.51-1.64-5.25-3.84H3.18v2.57C4.82 19.9 8.18 22 12 22z" fill="#34A853"/><path d="M6.75 14.25A5.38 5.38 0 016.4 12.5c0-.61.1-1.2.29-1.75V8.18H3.18A9.14 9.14 0 002 12.5c0 1.48.35 2.88.97 4.13l3.78-2.38z" fill="#FBBC05"/><path d="M12 6.63c1.37 0 2.6.47 3.57 1.4l2.68-2.68C16.95 3.83 14.69 3 12 3 8.18 3 4.82 5.1 3.18 8.18l3.57 2.57C7.49 8.27 9.56 6.63 12 6.63z" fill="#EA4335"/></svg>`,
+  linkedin:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="display:inline;vertical-align:middle;flex-shrink:0"><rect width="24" height="24" rx="4" fill="#0A66C2"/><path d="M7 9h2v8H7V9zm1-3a1.2 1.2 0 110 2.4A1.2 1.2 0 018 6zm4 3h1.9v1.1h.03c.26-.5 1-1.1 2.07-1.1C18.1 9 19 10.1 19 12.3V17h-2v-4.3c0-.9-.02-2.05-1.25-2.05-1.25 0-1.44.97-1.44 1.98V17H12V9z" fill="white"/></svg>`,
+  direct:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" style="display:inline;vertical-align:middle;flex-shrink:0"><circle cx="12" cy="12" r="9"/><path d="M12 8l4 4-4 4M8 12h8"/></svg>`,
+  globe:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" style="display:inline;vertical-align:middle;flex-shrink:0"><circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 010 18M3 12h18M4.5 7.5h15M4.5 16.5h15"/></svg>`
+};
+function getIcon(source){const s=(source||'').toLowerCase().trim();if(s==='ig'||s==='instagram')return ICONS.ig;if(s==='fb'||s==='facebook')return ICONS.fb;if(s==='adwords'||s==='google'||s==='google-ads'||s==='cpc'||s==='ppc')return ICONS.google;if(s==='linkedin')return ICONS.linkedin;if(!s||s==='direct'||s==='organic'||s==='(direct)')return ICONS.direct;return ICONS.globe;}
+
+// ── Pie chart ─────────────────────────────────────────────────────────────────
+const PIE_COLORS=['#6366f1','#3b82f6','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#a855f7','#10b981'];
+function renderPieChart(elId,data){
+  const el=document.getElementById(elId);
+  const filtered=data.filter(([,v])=>Math.round(v)>0);
+  if(!filtered.length){el.innerHTML='<p class="text-sm text-gray-400 text-center py-4">No spend data</p>';return;}
+  const total=filtered.reduce((s,d)=>s+d[1],0);
+  const W=220,cx=110,cy=110,r=88,ri=52;let cum=-Math.PI/2;
+  const slices=filtered.map(([name,val],i)=>{const frac=val/total;const sa=cum,ea=cum+frac*2*Math.PI;cum=ea;const x1=cx+r*Math.cos(sa),y1=cy+r*Math.sin(sa),x2=cx+r*Math.cos(ea),y2=cy+r*Math.sin(ea),xi1=cx+ri*Math.cos(sa),yi1=cy+ri*Math.sin(sa),xi2=cx+ri*Math.cos(ea),yi2=cy+ri*Math.sin(ea),lg=frac>0.5?1:0;const d=`M${x1.toFixed(2)} ${y1.toFixed(2)} A${r} ${r} 0 ${lg} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} L${xi2.toFixed(2)} ${yi2.toFixed(2)} A${ri} ${ri} 0 ${lg} 0 ${xi1.toFixed(2)} ${yi1.toFixed(2)}Z`;return{name,val,frac,d,color:PIE_COLORS[i%PIE_COLORS.length]};});
+  const totalFmt='€'+total.toFixed(0);
+  const paths=slices.map((s,i)=>`<path d="${s.d}" fill="${s.color}" stroke="white" stroke-width="2.5" style="cursor:pointer;transition:opacity 0.12s,transform 0.12s;transform-origin:${cx}px ${cy}px;transform-box:fill-box" onmouseenter="showPieTip(event,'${s.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','€${s.val.toFixed(0)}','${(s.frac*100).toFixed(1)}%',${i})" onmouseleave="hidePieTip()" onmousemove="movePieTip(event)"/>`).join('');
+  el.innerHTML=`<div style="display:flex;justify-content:center"><svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}" id="pie-svg-main">${paths}<text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="15" font-weight="700" fill="#111827" id="pie-center-top">${totalFmt}</text><text x="${cx}" y="${cy+13}" text-anchor="middle" font-size="10" fill="#9ca3af" id="pie-center-bot">Total spend</text></svg></div>`;
+}
+function showPieTip(e,name,spend,pct,idx){const tt=document.getElementById('pie-tooltip');tt.style.display='block';document.getElementById('pie-tt-name').textContent=name;document.getElementById('pie-tt-spend').textContent=spend;document.getElementById('pie-tt-pct').textContent=pct+' of total spend';movePieTip(e);document.querySelectorAll('#pie-svg-main path').forEach((p,i)=>{p.style.opacity=i===idx?1:0.3;p.style.transform=i===idx?'scale(1.03)':'scale(1)';});}
+function hidePieTip(){document.getElementById('pie-tooltip').style.display='none';document.querySelectorAll('#pie-svg-main path').forEach(p=>{p.style.opacity=1;p.style.transform='scale(1)';});}
+function movePieTip(e){const tt=document.getElementById('pie-tooltip');const w=tt.offsetWidth||200;tt.style.left=(e.clientX+18+w>window.innerWidth?e.clientX-w-10:e.clientX+18)+'px';tt.style.top=(e.clientY-40)+'px';}
+
+// ── Parsing ───────────────────────────────────────────────────────────────────
+// Parse "Unique Campaigns" field into structured entries
+function parseCampaignEntries(campaignsRaw){
+  if(!campaignsRaw||!campaignsRaw.trim())return[];
+  return campaignsRaw.split(',').map(e=>e.trim()).filter(Boolean).map(entry=>{
+    const p=entry.split(' - ').map(x=>x.trim());
+    const source=p[0]||'',medium=p[1]||'';
+    const src=source.toLowerCase();
+    // Meta (numeric IDs)
+    if(['fb','ig','facebook','instagram','meta'].includes(src)){
+      const campaign_id=p[2]||'',adset_id=p[3]||'';
+      return{source,medium,campaign_id,adset_id,campaignLabel:null,entryType:'meta'};
+    }
+    // Google Ads — campaign name = first 3 segments after source/medium; keyword = 4th+
+    if(['adwords','google'].includes(src)){
+      const parts=p.slice(2);
+      const campaignLabel=parts.slice(0,3).join(' - ')||'Unknown';
+      return{source,medium,campaign_id:'',adset_id:'',campaignLabel,entryType:'google'};
+    }
+    // LinkedIn — strip numeric campaign ID prefix like "302922997-"
+    if(src==='linkedin'){
+      const remaining=p.slice(2).join(' - ');
+      const campaignLabel=remaining?remaining.replace(/^\d+-/,'').trim():'Social';
+      return{source,medium,campaign_id:'',adset_id:'',campaignLabel:campaignLabel||'Social',entryType:'linkedin'};
+    }
+    // HubSpot — strip numeric email ID prefix like "119377143-"
+    if(src.startsWith('hs_')){
+      const remaining=p.slice(2).join(' - ');
+      const campaignLabel=remaining?remaining.replace(/^\d+-/,'').trim():medium||source;
+      return{source,medium,campaign_id:'',adset_id:'',campaignLabel:campaignLabel||source,entryType:'email'};
+    }
+    // Others
+    const remaining=p.slice(2).join(' - ');
+    return{source,medium,campaign_id:'',adset_id:'',campaignLabel:remaining||source,entryType:'other'};
+  });
+}
+function extractPagePaths(pagesRaw){if(!pagesRaw||!pagesRaw.trim())return'';try{const urls=pagesRaw.split(',').map(u=>u.trim()).filter(Boolean);const paths=urls.map(u=>{try{const uu=new URL(u.trim());return uu.pathname==='/'?uu.hostname:uu.pathname;}catch{return u.split('?')[0].replace(/https?:\/\/[^/]+/,'')||'/';}});return[...new Set(paths)].join(', ');}catch{return pagesRaw.substring(0,100);}}
+function extractPagePathsList(pagesRaw){if(!pagesRaw||!pagesRaw.trim())return[];try{const urls=pagesRaw.split(',').map(u=>u.trim()).filter(Boolean);const paths=urls.map(u=>{try{const uu=new URL(u.trim());return uu.pathname==='/'?'/':uu.pathname;}catch{return u.split('?')[0].replace(/https?:\/\/[^/]+/,'')||'/';}});return[...new Set(paths)];}catch{return[];}}
+// Legacy: parse page URL UTMs (for ad ID matching only)
+function parseAdPageMappings(pagesRaw,adIdToMeta){
+  if(!pagesRaw)return[];
+  const urls=pagesRaw.split(',').map(u=>u.trim()).filter(Boolean);
+  const mappings=[],seen=new Set();
+  for(const url of urls){
+    const m=url.match(/utm_content=(\d+)/);const adId=m?m[1]:null;
+    const meta=adId&&adIdToMeta?adIdToMeta[adId]:null;
+    if(adId&&meta&&!seen.has(adId)){seen.add(adId);mappings.push({adName:meta.adName,adId,campaign_name:meta.campaign_name,adset_name:meta.adset_name});}
+  }
+  return mappings;
+}
+
+// ── File handling ─────────────────────────────────────────────────────────────
+function toggleDark(){document.documentElement.classList.toggle('dark');document.body.classList.toggle('bg-gray-50');document.body.classList.toggle('bg-gray-950');document.body.classList.toggle('text-gray-900');document.body.classList.toggle('text-gray-100');document.getElementById('sunIcon').classList.toggle('hidden');document.getElementById('moonIcon').classList.toggle('hidden');}
+function handleFile(input,type){const f=input.files[0];if(!f)return;if(type==='meta'){metaFile=f;showSel('meta',f);}else if(type==='snitcher'){snitcherFile=f;showSel('snitcher',f);}else if(type==='linkedin'){linkedinFile=f;showSel('linkedin',f);}else if(type==='hubspot'){hubspotFile=f;showSel('hubspot',f);}checkReady();}
+function handleDrop(e,type){e.preventDefault();e.currentTarget.classList.remove('border-blue-600','bg-blue-50','border-orange-500','bg-orange-50');const f=e.dataTransfer.files[0];if(!f)return;if(type==='meta'){metaFile=f;showSel('meta',f);}else if(type==='snitcher'){snitcherFile=f;showSel('snitcher',f);}else if(type==='linkedin'){linkedinFile=f;showSel('linkedin',f);}else if(type==='hubspot'){hubspotFile=f;showSel('hubspot',f);}checkReady();}
+function showSel(t,f){document.getElementById(t+'Placeholder').classList.add('hidden');document.getElementById(t+'Selected').classList.remove('hidden');document.getElementById(t+'FileName').textContent=f.name;document.getElementById(t+'FileSize').textContent=(f.size/1024).toFixed(1)+' KB';const z=document.getElementById(t+'DropZone');z.classList.remove('border-gray-300','border-blue-200','border-orange-200');z.classList.add('border-green-400','bg-green-50');}
+function checkReady(){const b=document.getElementById('processBtn');if(metaFile&&snitcherFile){b.disabled=false;b.className='px-8 py-3 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 cursor-pointer';}}
+
+function processFiles(){
+  Papa.parse(metaFile,{header:true,skipEmptyLines:true,complete:r=>{
+    Papa.parse(snitcherFile,{header:true,skipEmptyLines:true,complete:r2=>{
+      const parseLI=(cb)=>{if(linkedinFile){Papa.parse(linkedinFile,{header:true,skipEmptyLines:true,complete:r3=>cb(r3.data)});}else cb([]);};
+      const parseHS=(cb)=>{if(hubspotFile){Papa.parse(hubspotFile,{header:true,skipEmptyLines:true,complete:r4=>cb(r4.data)});}else cb([]);};
+      parseLI(liData=>parseHS(hsData=>{runMatching(r.data,r2.data,liData,hsData);showResults();}));
+    }});
+  }});
+}
+function showResults(){
+  document.getElementById('uploadSection').classList.add('hidden');
+  document.getElementById('resultsSection').classList.remove('hidden');
+  document.getElementById('resetBtn').classList.remove('hidden');
+  // Show hide-customers button only when HubSpot data has customers
+  const custBtn=document.getElementById('hideCustomersBtn');
+  if(custBtn){
+    if(result.hasHubspot){
+      custBtn.className='px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium';
+      custBtn.textContent='Hide customers';
+    } else {
+      custBtn.className='hidden';
+    }
+  }
+}
+
+// ── Matching ──────────────────────────────────────────────────────────────────
+// Detect HubSpot column names flexibly
+function detectHsColumns(data){
+  if(!data||!data.length)return{nameCol:null,lifecycleCol:null};
+  const keys=Object.keys(data[0]);
+  // Normalize: strip BOM, trim whitespace
+  const norm=k=>k.replace(/^\uFEFF/,'').trim();
+  // Company name: try exact matches first, then partial
+  const nameCol=
+    keys.find(k=>/^company\s*name$/i.test(norm(k)))||
+    keys.find(k=>/^name$/i.test(norm(k)))||
+    keys.find(k=>/associated\s*company/i.test(norm(k)))||
+    keys.find(k=>/company/i.test(norm(k)))||
+    keys[0];
+  // Lifecycle: try all common variants
+  const lifecycleCol=
+    keys.find(k=>/^lifecycle\s*stage$/i.test(norm(k)))||
+    keys.find(k=>/^lifecyclestage$/i.test(norm(k)))||
+    keys.find(k=>/^hs_lifecycle_stage$/i.test(norm(k)))||
+    keys.find(k=>/lifecycle/i.test(norm(k)))||
+    // Last resort: find a column that actually contains the value "customer"
+    keys.find(k=>data.slice(0,50).some(r=>(r[k]||'').trim().toLowerCase()==='customer'));
+  return{nameCol,lifecycleCol};
+}
+
+function runMatching(metaData,snitcherData,linkedinData,hubspotData){
+  const metaRows=metaData.filter(r=>(r[META.campaign_name]||'').trim()!=='');
+  const summaryRow=metaData.find(r=>(r[META.campaign_name]||'').trim()==='');
+
+  const byAdId=new Map(),byAdsetId=new Map(),byCampaignId=new Map();
+  adIdToMeta={};adsetIdToMeta={};
+  metaRows.forEach(row=>{
+    const aid=(row[META.ad_id]||'').trim(),asid=(row[META.adset_id]||'').trim(),cid=(row[META.campaign_id]||'').trim();
+    const adName=(row[META.ad_name]||'').trim(),campaign_name=(row[META.campaign_name]||'').trim(),adset_name=(row[META.adset_name]||'').trim();
+    if(aid){byAdId.set(aid,row);adIdToMeta[aid]={adName,campaign_name,adset_name};}
+    if(asid){if(!byAdsetId.has(asid))byAdsetId.set(asid,row);adsetIdToMeta[asid]={adName,campaign_name,adset_name};}
+    if(cid&&!byCampaignId.has(cid))byCampaignId.set(cid,row);
+  });
+
+  let totalSpend=0,totalImpressions=0,totalReach=0,totalFrequency=0,currency='EUR',dateStart='',dateEnd='';
+  if(summaryRow){totalSpend=Number(summaryRow[META.spend])||0;totalImpressions=Number(summaryRow[META.impressions])||0;totalReach=Number(summaryRow[META.reach])||0;totalFrequency=Number(summaryRow[META.frequency])||0;currency=summaryRow[META.currency]||'EUR';dateStart=summaryRow[META.starts]||'';dateEnd=summaryRow[META.ends]||'';}
+
+  const adSpend={};
+  metaRows.forEach(r=>{const name=(r[META.ad_name]||'Unknown').trim();const s=Number(r[META.spend])||0;if(s>0)adSpend[name]=(adSpend[name]||0)+s;});
+
+  // LinkedIn lookup by normalized company name
+  const liByName=new Map();
+  (linkedinData||[]).forEach(row=>{const n=(row[LI.name]||'').trim();if(n)liByName.set(n.toLowerCase(),row);});
+
+  // HubSpot customer lookup
+  const hsCols=detectHsColumns(hubspotData||[]);
+  const hsCustomers=new Set();
+  if(hubspotData&&hubspotData.length){
+    console.log('[HubSpot] columns detected — name:',hsCols.nameCol,'lifecycle:',hsCols.lifecycleCol);
+    console.log('[HubSpot] all columns:',Object.keys(hubspotData[0]||{}));
+  }
+  if(hsCols.nameCol&&hsCols.lifecycleCol){
+    (hubspotData||[]).forEach(row=>{
+      const stage=(row[hsCols.lifecycleCol]||'').trim().toLowerCase();
+      if(stage==='customer'){const n=(row[hsCols.nameCol]||'').trim();if(n)hsCustomers.add(n.toLowerCase());}
+    });
+    console.log('[HubSpot] customers found:',hsCustomers.size,[...hsCustomers].slice(0,5));
+  } else if(hubspotData&&hubspotData.length){
+    console.warn('[HubSpot] could not detect columns — nameCol:',hsCols.nameCol,'lifecycleCol:',hsCols.lifecycleCol);
+  }
+
+  const matched=[],unmatched=[];
+  snitcherData.forEach(srow=>{
+    const company=(srow[SNITCH.name]||'').trim()||'Unknown';
+    const industry=(srow[SNITCH.industry]||'').trim()||'Unknown';
+    const size=(srow[SNITCH.size]||'').trim();
+    const country=(srow[SNITCH.country]||'').trim()||'Unknown';
+    const visits=Number(srow[SNITCH.visits]||0);
+    const pageviews=Number(srow[SNITCH.pageviews]||0);
+    const pagesRaw=srow[SNITCH.pages]||'';
+    const destinations=extractPagePaths(pagesRaw);
+    const pagePathsList=extractPagePathsList(pagesRaw);
+    const campaignsRaw=srow[SNITCH.campaigns]||'';
+    const campaignEntries=parseCampaignEntries(campaignsRaw);
+    const adPageMappings=parseAdPageMappings(pagesRaw,adIdToMeta);
+    const first_visit=(srow[SNITCH.first_visit]||'').split(' ')[0];
+    const last_visit=(srow[SNITCH.last_visit]||'').split(' ')[0];
+    const liRow=liByName.get(company.toLowerCase())||null;
+    const liHasTraction=liRow&&(Number(liRow[LI.paid_imp]||0)+Number(liRow[LI.paid_clicks]||0)+Number(liRow[LI.paid_eng]||0)+Number(liRow[LI.org_imp]||0)+Number(liRow[LI.org_eng]||0))>0;
+    const isOpportunity=!!liHasTraction;
+    const lifecycle_stage=hsCustomers.has(company.toLowerCase())?'customer':'';
+
+    const metaEntries=campaignEntries.filter(e=>e.entryType==='meta');
+
+    if(metaEntries.length===0){
+      unmatched.push({company_name:company,industry,employee_count:size,country,total_visits:visits,page_views:pageviews,destinations,pagePathsList,ad_names:'',raw_campaigns:campaignsRaw,first_visit,last_visit,campaignEntries,adPageMappings,linkedinData:liRow,isOpportunity,lifecycle_stage});
+      return;
+    }
+
+    const adIdsFromUrls=(pagesRaw.match(/utm_content=(\d+)/g)||[]).map(m=>m.replace('utm_content=',''));
+    const uniqueAdIds=[...new Set(adIdsFromUrls)];
+    const adNames=[];
+    for(const adId of uniqueAdIds){if(byAdId.has(adId)){const n=(byAdId.get(adId)[META.ad_name]||'').trim();if(n&&!adNames.includes(n))adNames.push(n);}}
+
+    let matchedRow=null;
+    for(const adId of uniqueAdIds){if(byAdId.has(adId)){matchedRow=byAdId.get(adId);break;}}
+    if(!matchedRow)for(const e of metaEntries){if(e.adset_id&&byAdsetId.has(e.adset_id)){matchedRow=byAdsetId.get(e.adset_id);break;}}
+    if(!matchedRow)for(const e of metaEntries){if(e.campaign_id&&byCampaignId.has(e.campaign_id)){matchedRow=byCampaignId.get(e.campaign_id);break;}}
+
+    if(matchedRow){
+      matched.push({company_name:company,industry,employee_count:size,country,total_visits:visits,page_views:pageviews,destinations,pagePathsList,campaign_name:(matchedRow[META.campaign_name]||'').trim(),adset_name:(matchedRow[META.adset_name]||'').trim(),ad_name:adNames.length>0?adNames[0]:(matchedRow[META.ad_name]||'').trim(),all_ad_names:adNames.join(', '),first_visit,last_visit,campaignEntries,adPageMappings,linkedinData:liRow,isOpportunity,lifecycle_stage});
+    }else{
+      unmatched.push({company_name:company,industry,employee_count:size,country,total_visits:visits,page_views:pageviews,destinations,pagePathsList,ad_names:adNames.join(', '),raw_campaigns:campaignsRaw,first_visit,last_visit,campaignEntries,adPageMappings,linkedinData:liRow,isOpportunity,lifecycle_stage});
+    }
+  });
+
+  result={matched,unmatched,metaOverview:{totalSpend,totalImpressions,totalReach,totalFrequency,currency,dateStart,dateEnd,totalAds:metaRows.length,adSpend},hasLinkedin:liByName.size>0,hasHubspot:hsCustomers.size>0};
+  hideCustomers=false;
+  excludedCompanies.clear();expandedRows.clear();chartFilter={type:null,value:null};
+  Object.values(filterSel).forEach(s=>s.clear());
+  populateFilters();applyFilters();
+}
+
+// ── Multi-select ──────────────────────────────────────────────────────────────
+function toggleMsPanel(key){
+  if(openPanel===key){closeMsPanel();return;}
+  closeMsPanel();openPanel=key;
+  const p=document.getElementById('ms-panel-'+key);
+  if(p)p.style.display='flex';
+}
+function closeMsPanel(){if(openPanel){const p=document.getElementById('ms-panel-'+openPanel);if(p)p.style.display='none';}openPanel=null;}
+document.addEventListener('click',e=>{if(!e.target.closest('.ms-wrap'))closeMsPanel();});
+
+function toggleMsOpt(key,value,checked){
+  if(checked)filterSel[key].add(value);else filterSel[key].delete(value);
+  renderMsBtn(key);applyFilters();
+}
+function clearMs(key,e){if(e)e.stopPropagation();filterSel[key].clear();buildMsPanel(key,_msOpts[key]||[]);renderMsBtn(key);applyFilters();}
+
+const _msOpts={};
+function buildMsPanel(key,options){
+  _msOpts[key]=options;
+  const list=document.getElementById('ms-list-'+key);
+  if(!list)return;
+  list.innerHTML=options.map(opt=>{
+    const safe=opt.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return `<label class="ms-option"><input type="checkbox" ${filterSel[key].has(opt)?'checked':''} onchange="toggleMsOpt('${key}','${safe}',this.checked)"><span>${opt}</span></label>`;
+  }).join('');
+  renderMsBtn(key);
+}
+function renderMsBtn(key){
+  const btn=document.getElementById('ms-btn-'+key);if(!btn)return;
+  const labels={industry:'Industry',country:'Country',size:'Company Size',campaign:'Campaign',adset:'Ad Set',ad:'Ad'};
+  const n=filterSel[key].size;
+  if(n>0){btn.className='ms-btn ms-active';btn.innerHTML=`${labels[key]||key} <span style="background:#2563eb;color:white;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:700">${n}</span> <span style="font-size:10px">▾</span>`;}
+  else{btn.className='ms-btn';btn.innerHTML=`${labels[key]||key} <span style="color:#9ca3af;font-size:10px">▾</span>`;}
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+function populateFilters(){
+  const all=[...result.matched,...result.unmatched];
+  buildMsPanel('industry',[...new Set(all.map(a=>a.industry))].filter(Boolean).sort());
+  buildMsPanel('country',[...new Set(all.map(a=>a.country))].filter(Boolean).sort());
+  buildMsPanel('size',[...new Set(all.map(a=>a.employee_count))].filter(Boolean).sort());
+  buildMsPanel('campaign',[...new Set(result.matched.map(a=>a.campaign_name).filter(Boolean))].sort());
+  buildMsPanel('adset',[...new Set(result.matched.map(a=>a.adset_name).filter(Boolean))].sort());
+  const allAdNames=[...new Set(result.matched.flatMap(a=>a.all_ad_names?a.all_ad_names.split(', '):(a.ad_name?[a.ad_name]:[])).filter(Boolean))].sort();
+  buildMsPanel('ad',allAdNames);
+}
+
+function applyFilters(){
+  const search=document.getElementById('filterSearch').value.toLowerCase().trim();
+  const minVisits=parseInt(document.getElementById('filterMinVisits').value)||0;
+  function passes(row){
+    if(excludedCompanies.has(row.company_name))return false;
+    if(hideCustomers&&row.lifecycle_stage==='customer')return false;
+    if(search&&!row.company_name.toLowerCase().includes(search))return false;
+    if(filterSel.industry.size>0&&!filterSel.industry.has(row.industry))return false;
+    if(filterSel.country.size>0&&!filterSel.country.has(row.country))return false;
+    if(filterSel.size.size>0&&!filterSel.size.has(row.employee_count))return false;
+    if(minVisits&&(row.total_visits||0)<minVisits)return false;
+    if(filterSel.campaign.size>0){const m=filterSel.campaign.has(row.campaign_name);if(!m)return false;}
+    if(filterSel.adset.size>0){const m=filterSel.adset.has(row.adset_name);if(!m)return false;}
+    if(filterSel.ad.size>0){const ads=row.all_ad_names?row.all_ad_names.split(', '):(row.ad_name?[row.ad_name]:[]);const m=ads.some(a=>filterSel.ad.has(a));if(!m)return false;}
+    if(chartFilter.type){
+      const cf=chartFilter;
+      if(cf.type==='ad'){const ads=row.all_ad_names?row.all_ad_names.split(', '):(row.ad_name?[row.ad_name]:[]);if(!ads.includes(cf.value))return false;}
+      if(cf.type==='industry'&&row.industry!==cf.value)return false;
+      if(cf.type==='size'&&(row.employee_count||'Unknown')!==cf.value)return false;
+      if(cf.type==='googleCampaign'||cf.type==='linkedinCampaign'){
+        const srcList=cf.type==='googleCampaign'?['adwords','google']:['linkedin'];
+        const match=(row.campaignEntries||[]).some(ce=>{
+          const s=(ce.source||'').toLowerCase();
+          if(!srcList.includes(s))return false;
+          return (ce.campaignLabel||s||'Unknown')===cf.value;
+        });
+        if(!match)return false;
+      }
+    }
+    return true;
+  }
+  filteredMatched=result.matched.filter(passes);
+  filteredUnmatched=result.unmatched.filter(passes);
+  const banner=document.getElementById('chartFilterBanner');
+  if(chartFilter.type){banner.classList.remove('hidden');document.getElementById('chartFilterLabel').textContent=`Filtered by ${chartFilter.type}: ${chartFilter.value}`;}
+  else banner.classList.add('hidden');
+  const anyActive=search||minVisits||Object.values(filterSel).some(s=>s.size>0)||excludedCompanies.size>0||chartFilter.type;
+  const summary=document.getElementById('filterSummary');
+  if(anyActive){const t=result.matched.length+result.unmatched.length;const s=filteredMatched.length+filteredUnmatched.length;summary.classList.remove('hidden');summary.textContent=`Showing ${s} of ${t} accounts`;}else summary.classList.add('hidden');
+  currentPage=0;renderAll();
+}
+function toggleHideCustomers(){hideCustomers=!hideCustomers;const btn=document.getElementById('hideCustomersBtn');if(btn){btn.textContent=hideCustomers?'Unhide customers':'Hide customers';btn.className=hideCustomers?'px-3 py-1.5 text-sm rounded-lg border border-green-500 text-white bg-green-600 hover:bg-green-700 cursor-pointer font-medium':'px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium';}applyFilters();}
+function clearAllFilters(){hideCustomers=false;const btn=document.getElementById('hideCustomersBtn');if(btn&&btn.className.indexOf('hidden')===-1){btn.textContent='Hide customers';btn.className='px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium';}document.getElementById('filterSearch').value='';document.getElementById('filterMinVisits').value='';Object.keys(filterSel).forEach(k=>{filterSel[k].clear();buildMsPanel(k,_msOpts[k]||[]);renderMsBtn(k);});excludedCompanies.clear();chartFilter={type:null,value:null};applyFilters();}
+function clearChartFilter(){chartFilter={type:null,value:null};applyFilters();}
+function toggleChartFilter(type,value){if(chartFilter.type===type&&chartFilter.value===value)chartFilter={type:null,value:null};else chartFilter={type,value};applyFilters();}
+function toggleExclude(company){if(excludedCompanies.has(company))excludedCompanies.delete(company);else excludedCompanies.add(company);applyFilters();}
+function toggleExpand(company){if(expandedRows.has(company))expandedRows.delete(company);else expandedRows.add(company);renderTable();}
+
+// ── Campaign block toggle ─────────────────────────────────────────────────────
+const _collapsed={};
+function toggleCampaignBlock(key){
+  _collapsed[key]=!_collapsed[key];
+  const body=document.getElementById(key+'-campaign-body');
+  const chevron=document.getElementById(key+'-chevron');
+  if(body)body.style.display=_collapsed[key]?'none':'';
+  if(chevron)chevron.style.transform=_collapsed[key]?'rotate(-90deg)':'';
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderAll(){renderMetaOverview();renderAccountOverview();renderTabs();renderTable();}
+
+function renderMetaOverview(){
+  const ov=result.metaOverview;
+  if(ov.dateStart&&ov.dateEnd)document.getElementById('dateRange').textContent=`${ov.dateStart} to ${ov.dateEnd}`;
+  document.getElementById('metaStats').innerHTML=[{l:'Total Spend',v:'€'+ov.totalSpend.toFixed(2)},{l:'Impressions',v:ov.totalImpressions.toLocaleString()},{l:'Reach',v:ov.totalReach.toLocaleString()},{l:'Frequency',v:ov.totalFrequency.toFixed(2)},{l:'Ads',v:ov.totalAds}].map(s=>`<div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"><p class="text-xs text-gray-500 font-medium uppercase tracking-wide">${s.l}</p><p class="text-2xl font-bold mt-1">${s.v}</p></div>`).join('');
+  renderPieChart('spendChart',Object.entries(ov.adSpend||{}).sort((a,b)=>b[1]-a[1]));
+}
+
+function renderAccountOverview(){
+  const all=[...filteredMatched,...filteredUnmatched];
+  const oppCount=all.filter(r=>r.isOpportunity).length;
+  const custCount=all.filter(r=>r.lifecycle_stage==='customer').length;
+  const statsArr=[{l:'Total Accounts',v:all.length},{l:'Matched',v:filteredMatched.length},{l:'Unmatched',v:filteredUnmatched.length},{l:'Total Visits',v:all.reduce((s,a)=>s+(a.total_visits||0),0)}];
+  if(result.hasLinkedin)statsArr.push({l:'Opportunities',v:oppCount,opp:true});
+  if(result.hasHubspot)statsArr.push({l:'Customers',v:custCount,cust:true});
+  document.getElementById('accountStats').innerHTML=statsArr.map(s=>{
+    const borderCls=s.opp?'border-amber-300 dark:border-amber-700':s.cust?'border-green-300 dark:border-green-800':'border-gray-200 dark:border-gray-700';
+    const labelCls=s.opp?'text-amber-600 dark:text-amber-400':s.cust?'text-green-700 dark:text-green-400':'text-gray-500';
+    const valCls=s.opp?'text-amber-600 dark:text-amber-400':s.cust?'text-green-700 dark:text-green-400':'';
+    return `<div class="bg-white dark:bg-gray-800 rounded-lg border ${borderCls} p-4"><p class="text-xs ${labelCls} font-medium uppercase tracking-wide">${s.l}</p><p class="text-2xl font-bold mt-1 ${valCls}">${s.v}</p></div>`;
+  }).join('');
+  renderClickableChart('adAccountChart',buildAdMap(filteredMatched),'ad',['bg-violet-500','bg-blue-500','bg-cyan-500','bg-teal-500','bg-green-500','bg-yellow-500','bg-orange-500','bg-red-500']);
+  renderClickableChart('industryChart',buildMap(all,'industry'),'industry',['bg-blue-500','bg-indigo-500','bg-purple-500','bg-pink-500','bg-red-500','bg-orange-500','bg-yellow-500','bg-green-500']);
+  renderClickableChart('sizeChart',buildMap(all,'employee_count','Unknown'),'size',['bg-teal-500','bg-cyan-500','bg-emerald-500','bg-lime-500','bg-amber-500']);
+  // Google campaigns from "Unique Campaigns"
+  const googleMap=buildCampaignSourceMap(all,['adwords','google']);
+  document.getElementById('googleChartCard').style.display=googleMap.size>0?'':'none';
+  if(googleMap.size>0)renderClickableChart('googleCampaignChart',googleMap,'googleCampaign',['bg-red-500','bg-yellow-500','bg-green-500','bg-blue-500','bg-orange-500']);
+  // LinkedIn campaigns from "Unique Campaigns"
+  const liUTMMap=buildCampaignSourceMap(all,['linkedin']);
+  document.getElementById('liChartCard').style.display=liUTMMap.size>0?'':'none';
+  if(liUTMMap.size>0)renderClickableChart('linkedinCampaignChart',liUTMMap,'linkedinCampaign',['bg-blue-700','bg-blue-500','bg-blue-400','bg-indigo-500']);
+}
+
+function buildAdMap(data){const m=new Map();data.forEach(r=>{const ads=r.all_ad_names?r.all_ad_names.split(', ').filter(Boolean):(r.ad_name?[r.ad_name]:[]);const seen=new Set();ads.forEach(a=>{if(!seen.has(a)){seen.add(a);m.set(a,(m.get(a)||0)+1);}});});return m;}
+function buildMap(data,key,fb){const m=new Map();data.forEach(r=>{const v=r[key]||fb||'Unknown';m.set(v,(m.get(v)||0)+1);});return m;}
+function buildCampaignSourceMap(data,sources){
+  const m=new Map();
+  data.forEach(r=>{
+    const seen=new Set();
+    (r.campaignEntries||[]).forEach(ce=>{
+      const s=(ce.source||'').toLowerCase();
+      if(sources.some(src=>s===src||s.includes(src))){
+        const key=ce.campaignLabel||s||'Unknown';
+        if(!seen.has(key)){seen.add(key);m.set(key,(m.get(key)||0)+1);}
+      }
+    });
+  });
+  return m;
+}
+function renderClickableChart(elId,dataMap,filterType,colors){
+  const data=Array.from(dataMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const max=Math.max(...data.map(d=>d[1]),1);
+  const active=chartFilter.type===filterType?chartFilter.value:null;
+  document.getElementById(elId).innerHTML=data.length?data.map(([name,count],i)=>{
+    const isA=active===name,isD=active&&!isA;
+    const safe=name.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return `<div class="flex items-center gap-3 bar-clickable ${isD?'bar-dimmed':''}" onclick="toggleChartFilter('${filterType}','${safe}')"><span class="text-xs text-gray-600 dark:text-gray-400 w-40 text-right truncate" title="${name}">${name}</span><div class="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-5 overflow-hidden ${isA?'bar-active':''}"><div class="${colors[i%colors.length]} h-5 rounded-full" style="width:${(count/max*100).toFixed(0)}%"></div></div><span class="text-xs font-semibold text-gray-700 dark:text-gray-300 w-8">${count}</span></div>`;
+  }).join(''):'<p class="text-sm text-gray-400 text-center py-4">No data</p>';
+}
+
+function renderTabs(){
+  const oppCount=[...filteredMatched,...filteredUnmatched].filter(r=>r.isOpportunity).length;
+  const tabs=[['matched','Matched Accounts',filteredMatched.length,false],['unmatched','Unmatched',filteredUnmatched.length,false]];
+  if(result.hasLinkedin)tabs.push(['opportunities','Opportunities',oppCount,true]);
+  document.getElementById('tabBar').innerHTML=tabs.map(([id,l,c,isOpp])=>{
+    const isA=currentTab===id;
+    if(isOpp)return `<button onclick="switchTab('${id}')" class="px-4 py-3 font-medium text-sm cursor-pointer border-b-2 ${isA?'border-amber-500 text-amber-600 dark:text-amber-400':'border-transparent text-gray-500 hover:text-amber-500'}">${l} <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ml-1 ${isA?'bg-amber-500 text-white':'bg-amber-100 text-amber-700'}">${c}</span></button>`;
+    return `<button onclick="switchTab('${id}')" class="px-4 py-3 font-medium text-sm cursor-pointer ${isA?'tab-active':'tab-inactive'}">${l} (${c})</button>`;
+  }).join('');
+}
+
+const tableCols=[['company_name','Company'],['industry','Industry'],['employee_count','Size'],['country','Country'],['page_views','Views'],['total_visits','Visits']];
+function getTabData(){if(currentTab==='matched')return filteredMatched;if(currentTab==='unmatched')return filteredUnmatched;if(currentTab==='opportunities')return[...filteredMatched,...filteredUnmatched].filter(r=>r.isOpportunity);return[];}
+function switchTab(tab){currentTab=tab;currentPage=0;expandedRows.clear();renderTabs();renderTable();}
+
+function renderTable(){
+  const data=getTabData();
+  const start=currentPage*PAGE_SIZE,pageData=data.slice(start,start+PAGE_SIZE);
+  const colSpan=tableCols.length+2;
+  document.getElementById('tableHead').innerHTML='<tr><th class="py-3 px-2 border-b border-gray-200 dark:border-gray-700 w-6"></th><th class="py-3 px-2 border-b border-gray-200 dark:border-gray-700 w-6"></th>'+tableCols.map(c=>`<th class="text-left py-3 px-3 border-b border-gray-200 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider whitespace-nowrap">${c[1]}</th>`).join('')+'</tr>';
+  let tbody='';
+  for(const row of pageData){
+    const isExp=expandedRows.has(row.company_name),ex=excludedCompanies.has(row.company_name);
+    const safe=row.company_name.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    const isCustomer=row.lifecycle_stage==='customer';
+    const rowBg=row.isOpportunity?'bg-amber-50/40 dark:bg-amber-950/20':isCustomer?'cust-row':'';
+    tbody+=`<tr class="expand-row ${rowBg}" onclick="toggleExpand('${safe}')">`;
+    tbody+=`<td class="py-2 px-2 border-b border-gray-100 dark:border-gray-800 text-center"><svg class="chevron ${isExp?'chevron-open':''} w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></td>`;
+    tbody+=`<td class="py-2 px-2 border-b border-gray-100 dark:border-gray-800 text-center" onclick="event.stopPropagation();toggleExclude('${safe}')"><button class="w-6 h-6 rounded flex items-center justify-center text-xs cursor-pointer ${ex?'bg-red-100 text-red-600':'bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:bg-gray-700'}">${ex?'✕':'−'}</button></td>`;
+    for(const c of tableCols){
+      if(c[0]==='company_name'){
+        const oppBadge=row.isOpportunity?`<span class="opp-badge">⚡ Opportunity</span>`:'';
+        const custBadge=isCustomer?`<span class="cust-badge">✓ Customer</span>`:'';
+        tbody+=`<td class="py-2.5 px-3 border-b border-gray-100 dark:border-gray-800 text-sm whitespace-nowrap font-medium">${row.company_name}${oppBadge}${custBadge}</td>`;
+      }else{
+        const str=String(row[c[0]]??'');
+        tbody+=`<td class="py-2.5 px-3 border-b border-gray-100 dark:border-gray-800 text-sm whitespace-nowrap" title="${str.replace(/"/g,'&quot;')}">${str.length>45?str.substring(0,42)+'...':str}</td>`;
+      }
+    }
+    tbody+='</tr>';
+
+    if(isExp){
+      tbody+=`<tr><td colspan="${colSpan}" class="p-0 border-b border-gray-200 dark:border-gray-700"><div class="detail-panel bg-gray-50 dark:bg-gray-800/50 px-6 py-5">`;
+
+      // Visit dates
+      if(row.first_visit||row.last_visit){
+        tbody+=`<div style="display:flex;gap:24px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e5e7eb">`;
+        if(row.first_visit)tbody+=`<div><span style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:2px">First Visit</span><span style="font-size:13px;color:#374151">${row.first_visit}</span></div>`;
+        if(row.last_visit)tbody+=`<div><span style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:2px">Last Visit</span><span style="font-size:13px;color:#374151">${row.last_visit}</span></div>`;
+        tbody+=`</div>`;
+      }
+
+      // Account engagement — channel cards from "Unique Campaigns"
+      const entries=row.campaignEntries||[];
+      tbody+=`<div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Account engagement</div>`;
+      if(entries.length>0){
+        for(const ce of entries){
+          const icon=getIcon(ce.source);
+          let label='',sublabel='';
+          if(ce.entryType==='meta'){
+            // Look up ad/campaign name from global maps or row data
+            const meta=ce.adset_id?adsetIdToMeta[ce.adset_id]:null;
+            const adName=meta?meta.adName:(row.ad_name||null);
+            const campName=meta?meta.campaign_name:(row.campaign_name||null);
+            const adsetName=meta?meta.adset_name:(row.adset_name||null);
+            label=adName||`${ce.source.toUpperCase()} / ${ce.medium||'paid'}`;
+            if(campName||adsetName){sublabel=(campName||'')+(campName&&adsetName?' <span style="color:#d1d5db">›</span> ':'')+(adsetName||'');}
+          }else if(ce.entryType==='google'){
+            label=ce.campaignLabel||'Google Ads';
+            sublabel=`${ce.source} / ${ce.medium||'ppc'}`;
+          }else if(ce.entryType==='linkedin'){
+            label=ce.campaignLabel||'Social';
+            sublabel=`LinkedIn / ${ce.medium||'social'}`;
+          }else if(ce.entryType==='email'){
+            label=ce.campaignLabel||ce.source;
+            sublabel=`${ce.source} / ${ce.medium||'email'}`;
+          }else{
+            label=ce.campaignLabel||ce.source||'Unknown';
+            if(ce.medium)sublabel=`${ce.source} / ${ce.medium}`;
+          }
+          tbody+=`<div class="visit-card"><div style="display:flex;align-items:center;gap:7px;margin-bottom:${sublabel?'4px':'0'}">${icon}<span style="font-size:13px;font-weight:600;color:#1f2937">${label}</span></div>`;
+          if(sublabel)tbody+=`<div style="font-size:11px;color:#6b7280;margin-left:22px">${sublabel}</div>`;
+          tbody+=`</div>`;
+        }
+      }else{
+        tbody+=`<p style="font-size:13px;color:#9ca3af;margin-bottom:12px">No tracked campaigns</p>`;
+      }
+      // Pages visited
+      const pages=row.pagePathsList||[];
+      if(pages.length>0){
+        tbody+=`<div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-top:14px;margin-bottom:8px">Pages visited</div>`;
+        tbody+=`<div style="display:flex;flex-wrap:wrap;gap:6px">`;
+        pages.forEach(pg=>{tbody+=`<span style="font-size:12px;color:#4b5563;background:#f3f4f6;border-radius:6px;padding:3px 8px;font-family:monospace">${pg}</span>`;});
+        tbody+=`</div>`;
+      }
+
+      // LinkedIn engagement
+      if(row.linkedinData){
+        const li=row.linkedinData;
+        const paidImp=Number(li[LI.paid_imp]||0),paidClicks=Number(li[LI.paid_clicks]||0),paidEng=Number(li[LI.paid_eng]||0),orgImp=Number(li[LI.org_imp]||0),orgEng=Number(li[LI.org_eng]||0);
+        const statCard=(val,label)=>`<div style="text-align:center;padding:6px;background:white;border-radius:6px;border:1px solid #dbeafe"><div style="font-size:16px;font-weight:700;color:#1e40af">${val.toLocaleString()}</div><div style="font-size:10px;color:#6b7280;margin-top:1px">${label}</div></div>`;
+        tbody+=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid #e5e7eb">`;
+        tbody+=`<div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">LinkedIn engagement</div>`;
+        tbody+=`<div class="li-card">`;
+        tbody+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">${ICONS.linkedin}<span style="font-size:13px;font-weight:600;color:#1f2937">LinkedIn</span></div>`;
+        // Paid row
+        tbody+=`<div style="font-size:10px;font-weight:600;color:#6b7280;margin-bottom:6px;letter-spacing:0.03em">PAID</div>`;
+        tbody+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">`;
+        tbody+=statCard(paidImp,'Impressions')+statCard(paidClicks,'Clicks')+statCard(paidEng,'Engagements');
+        tbody+=`</div>`;
+        // Organic row
+        tbody+=`<div style="font-size:10px;font-weight:600;color:#6b7280;margin-bottom:6px;letter-spacing:0.03em">ORGANIC</div>`;
+        tbody+=`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">`;
+        tbody+=statCard(orgImp,'Impressions')+statCard(orgEng,'Engagements');
+        tbody+=`</div>`;
+        tbody+=`</div></div>`;
+      }
+
+      tbody+=`</div></td></tr>`;
+    }
+  }
+  document.getElementById('tableBody').innerHTML=tbody;
+
+  const tp=Math.ceil(data.length/PAGE_SIZE);
+  document.getElementById('pagination').innerHTML=data.length>PAGE_SIZE?`<span>Showing ${start+1}–${Math.min(start+PAGE_SIZE,data.length)} of ${data.length}</span><div class="flex gap-2"><button onclick="prevPage()" class="px-3 py-1 rounded border ${currentPage===0?'opacity-50 cursor-not-allowed':'hover:bg-gray-100 cursor-pointer'}" ${currentPage===0?'disabled':''}>Prev</button><button onclick="nextPage()" class="px-3 py-1 rounded border ${currentPage>=tp-1?'opacity-50 cursor-not-allowed':'hover:bg-gray-100 cursor-pointer'}" ${currentPage>=tp-1?'disabled':''}>Next</button></div>`:`<span>${data.length} rows</span>`;
+}
+
+function prevPage(){if(currentPage>0){currentPage--;renderTable();}}
+function nextPage(){if(currentPage<Math.ceil(getTabData().length/PAGE_SIZE)-1){currentPage++;renderTable();}}
+
+function exportCSV(){
+  const data=getTabData();
+  const baseCols=tableCols;
+  const extraCols=currentTab==='unmatched'?[['raw_campaigns','Campaigns'],['first_visit','First Visit'],['last_visit','Last Visit']]:[['campaign_name','Campaign'],['adset_name','Ad Set'],['ad_name','Ad'],['all_ad_names','All Ads'],['destinations','Pages Visited'],['first_visit','First Visit'],['last_visit','Last Visit'],['isOpportunity','Opportunity']];
+  const exportCols=[...baseCols,...extraCols];
+  const csv=[exportCols.map(c=>c[1]).join(','),...data.map(row=>exportCols.map(c=>`"${String(row[c[0]]??'').replace(/"/g,'""')}"`).join(','))].join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${currentTab}-${new Date().toISOString().split('T')[0]}.csv`;document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+function resetApp(){
+  metaFile=null;snitcherFile=null;linkedinFile=null;hubspotFile=null;
+  hideCustomers=false;
+  excludedCompanies.clear();expandedRows.clear();chartFilter={type:null,value:null};
+  Object.values(filterSel).forEach(s=>s.clear());
+  const borderDefaults={meta:'border-gray-300',snitcher:'border-gray-300',linkedin:'border-blue-200',hubspot:'border-orange-200'};
+  ['meta','snitcher','linkedin','hubspot'].forEach(t=>{
+    document.getElementById(t+'Placeholder').classList.remove('hidden');
+    document.getElementById(t+'Selected').classList.add('hidden');
+    const z=document.getElementById(t+'DropZone');
+    z.classList.add(borderDefaults[t]);
+    z.classList.remove('border-green-400','bg-green-50');
+  });
+  const custBtn=document.getElementById('hideCustomersBtn');if(custBtn){custBtn.className='hidden';custBtn.textContent='Hide customers';}
+  document.getElementById('processBtn').disabled=true;
+  document.getElementById('processBtn').className='px-8 py-3 rounded-lg font-semibold bg-gray-300 text-gray-500 cursor-not-allowed';
+  document.getElementById('resultsSection').classList.add('hidden');
+  document.getElementById('uploadSection').classList.remove('hidden');
+  document.getElementById('resetBtn').classList.add('hidden');
+}
+</script>
+</body>
+</html>
