@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Account Engagement Tracker</title>
+<title>Traffic Intelligence Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
@@ -87,8 +87,8 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold">Account Engagement Tracker</h1>
-        <p class="mt-2 text-blue-100">Match ad campaigns to company-level visit and engagement data</p>
+        <h1 class="text-3xl font-bold">Traffic Intelligence Dashboard</h1>
+        <p class="mt-2 text-blue-100">See which companies visited your site and which ad platforms drove them there</p>
       </div>
       <button id="resetBtn" onclick="resetApp()" class="hidden px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors cursor-pointer">Start Over</button>
     </div>
@@ -211,8 +211,8 @@
 
   <!-- Account Overview -->
   <div class="mb-8">
-    <h2 class="text-xl font-bold mb-1">Account Overview</h2>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Based on the uploaded Snitcher export</p>
+    <h2 class="text-xl font-bold mb-1">Visitor Intelligence</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Companies identified on your site and which ad platforms reached them</p>
     <div id="accountStats" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6"></div>
 
     <div id="chartFilterBanner" class="hidden mb-4 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
@@ -222,7 +222,11 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
       <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Accounts by Meta Ad</h3>
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Platform Breakdown</h3>
+        <div id="platformBreakdownChart"></div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Which Meta ads brought companies to your site</h3>
         <div id="adAccountChart" class="space-y-2"></div>
       </div>
       <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
@@ -234,11 +238,11 @@
         <div id="sizeChart" class="space-y-2"></div>
       </div>
       <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5" id="googleChartCard" style="display:none">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Accounts by Google Campaign</h3>
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Which Google campaigns brought companies to your site</h3>
         <div id="googleCampaignChart" class="space-y-2"></div>
       </div>
       <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5" id="liChartCard" style="display:none">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Accounts by LinkedIn Campaign</h3>
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Which LinkedIn campaigns brought companies to your site</h3>
         <div id="linkedinCampaignChart" class="space-y-2"></div>
       </div>
     </div>
@@ -263,17 +267,10 @@
         <button class="ms-btn" id="ms-btn-size" onclick="toggleMsPanel('size');event.stopPropagation()">Company Size <span style="color:#9ca3af;font-size:10px">▾</span></button>
         <div class="ms-panel" id="ms-panel-size"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-size" oninput="filterMsPanel('size',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-size"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('size',event)">Clear</button></div></div>
       </div>
+      <select id="filterPlatform" class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" onchange="changePlatformFilter()"><option value="">All Platforms</option><option value="meta">Meta</option><option value="linkedin">LinkedIn</option><option value="google">Google</option></select>
       <div class="ms-wrap" id="ms-wrap-campaign">
         <button class="ms-btn" id="ms-btn-campaign" onclick="toggleMsPanel('campaign');event.stopPropagation()">Campaign <span style="color:#9ca3af;font-size:10px">▾</span></button>
-        <div class="ms-panel" id="ms-panel-campaign"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-campaign" oninput="filterMsPanel('campaign',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-campaign"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('campaign',event)">Clear</button></div></div>
-      </div>
-      <div class="ms-wrap" id="ms-wrap-adset">
-        <button class="ms-btn" id="ms-btn-adset" onclick="toggleMsPanel('adset');event.stopPropagation()">Ad Set <span style="color:#9ca3af;font-size:10px">▾</span></button>
-        <div class="ms-panel" id="ms-panel-adset"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-adset" oninput="filterMsPanel('adset',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-adset"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('adset',event)">Clear</button></div></div>
-      </div>
-      <div class="ms-wrap" id="ms-wrap-ad">
-        <button class="ms-btn" id="ms-btn-ad" onclick="toggleMsPanel('ad');event.stopPropagation()">Ad <span style="color:#9ca3af;font-size:10px">▾</span></button>
-        <div class="ms-panel" id="ms-panel-ad"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-ad" oninput="filterMsPanel('ad',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-ad"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('ad',event)">Clear</button></div></div>
+        <div class="ms-panel" id="ms-panel-campaign"><div class="ms-search"><input type="text" placeholder="Search..." id="ms-search-campaign" oninput="filterMsPanelGrouped('campaign',this.value)" onclick="event.stopPropagation()"></div><div class="ms-list" id="ms-list-campaign"></div><div class="ms-footer"><button class="text-xs text-red-500 hover:text-red-700 cursor-pointer" onclick="clearMs('campaign',event)">Clear</button></div></div>
       </div>
 
       <select id="filterMinVisits" class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" onchange="applyFilters()"><option value="">Min Visits</option><option value="2">2+</option><option value="3">3+</option><option value="5">5+</option><option value="10">10+</option></select>
@@ -307,13 +304,14 @@ let result={matched:[],unmatched:[],metaOverview:{}};
 let filteredMatched=[],filteredUnmatched=[];
 let excludedCompanies=new Set(),expandedRows=new Set();
 let chartFilter={type:null,value:null};
-let currentTab='matched',currentPage=0;
+let currentTab='all',currentPage=0;
 const PAGE_SIZE=25;
 let adIdToMeta={};
 let adsetIdToMeta={};  // adset_id -> {adName, campaign_name, adset_name}
 let hideCustomers=false;
 // Multi-select state
-const filterSel={industry:new Set(),country:new Set(),size:new Set(),campaign:new Set(),adset:new Set(),ad:new Set()};
+const filterSel={industry:new Set(),country:new Set(),size:new Set(),campaign:new Set()};
+let filterPlatform='';
 let openPanel=null;
 
 // ── Column keys ───────────────────────────────────────────────────────────────
@@ -794,11 +792,13 @@ function runMatching(metaData,snitcherData,linkedinData,hubspotData){
     const lifecycle_stage=hsCustomers.has(company.toLowerCase())?'customer':'';
 
     const metaEntries=campaignEntries.filter(e=>e.entryType==='meta');
+    const googleEntries=campaignEntries.filter(e=>e.entryType==='google');
+    const liEntries=campaignEntries.filter(e=>e.entryType==='linkedin');
 
-    if(metaEntries.length===0){
-      unmatched.push({company_name:company,industry,employee_count:size,country,total_visits:visits,page_views:pageviews,destinations,pagePathsList,ad_names:'',raw_campaigns:campaignsRaw,first_visit,last_visit,first_visit_full,last_visit_full,time_on_site,visitor_locations,campaignEntries,adPageMappings,linkedinData:liRow,isOpportunity,lifecycle_stage});
-      return;
-    }
+    // Build platforms set from all campaign entries
+    const platformSet=new Set();
+    if(googleEntries.length>0)platformSet.add('google');
+    if(liEntries.length>0)platformSet.add('linkedin');
 
     const adIdsFromUrls=(pagesRaw.match(/utm_content=(\d+)/g)||[]).map(m=>m.replace('utm_content=',''));
     const uniqueAdIds=[...new Set(adIdsFromUrls)];
@@ -806,19 +806,25 @@ function runMatching(metaData,snitcherData,linkedinData,hubspotData){
     for(const adId of uniqueAdIds){if(byAdId.has(adId)){const n=(byAdId.get(adId)[META.ad_name]||'').trim();if(n&&!adNames.includes(n))adNames.push(n);}}
 
     let matchedRow=null;
-    for(const adId of uniqueAdIds){if(byAdId.has(adId)){matchedRow=byAdId.get(adId);break;}}
-    if(!matchedRow)for(const e of metaEntries){if(e.adset_id&&byAdsetId.has(e.adset_id)){matchedRow=byAdsetId.get(e.adset_id);break;}}
-    if(!matchedRow)for(const e of metaEntries){if(e.campaign_id&&byCampaignId.has(e.campaign_id)){matchedRow=byCampaignId.get(e.campaign_id);break;}}
+    if(metaEntries.length>0){
+      for(const adId of uniqueAdIds){if(byAdId.has(adId)){matchedRow=byAdId.get(adId);break;}}
+      if(!matchedRow)for(const e of metaEntries){if(e.adset_id&&byAdsetId.has(e.adset_id)){matchedRow=byAdsetId.get(e.adset_id);break;}}
+      if(!matchedRow)for(const e of metaEntries){if(e.campaign_id&&byCampaignId.has(e.campaign_id)){matchedRow=byCampaignId.get(e.campaign_id);break;}}
+    }
 
     if(matchedRow){
-      matched.push({company_name:company,industry,employee_count:size,country,total_visits:visits,page_views:pageviews,destinations,pagePathsList,campaign_name:(matchedRow[META.campaign_name]||'').trim(),adset_name:(matchedRow[META.adset_name]||'').trim(),ad_name:adNames.length>0?adNames[0]:(matchedRow[META.ad_name]||'').trim(),all_ad_names:adNames.join(', '),first_visit,last_visit,first_visit_full,last_visit_full,time_on_site,visitor_locations,campaignEntries,adPageMappings,linkedinData:liRow,isOpportunity,lifecycle_stage});
+      platformSet.add('meta');
+      const platforms=[...platformSet];
+      matched.push({company_name:company,industry,employee_count:size,country,total_visits:visits,page_views:pageviews,destinations,pagePathsList,campaign_name:(matchedRow[META.campaign_name]||'').trim(),adset_name:(matchedRow[META.adset_name]||'').trim(),ad_name:adNames.length>0?adNames[0]:(matchedRow[META.ad_name]||'').trim(),all_ad_names:adNames.join(', '),first_visit,last_visit,first_visit_full,last_visit_full,time_on_site,visitor_locations,campaignEntries,adPageMappings,linkedinData:liRow,isOpportunity,lifecycle_stage,platforms});
     }else{
-      unmatched.push({company_name:company,industry,employee_count:size,country,total_visits:visits,page_views:pageviews,destinations,pagePathsList,ad_names:adNames.join(', '),raw_campaigns:campaignsRaw,first_visit,last_visit,first_visit_full,last_visit_full,time_on_site,visitor_locations,campaignEntries,adPageMappings,linkedinData:liRow,isOpportunity,lifecycle_stage});
+      const platforms=[...platformSet];
+      unmatched.push({company_name:company,industry,employee_count:size,country,total_visits:visits,page_views:pageviews,destinations,pagePathsList,ad_names:adNames.join(', '),raw_campaigns:campaignsRaw,first_visit,last_visit,first_visit_full,last_visit_full,time_on_site,visitor_locations,campaignEntries,adPageMappings,linkedinData:liRow,isOpportunity,lifecycle_stage,platforms});
     }
   });
 
   result={matched,unmatched,metaOverview:{totalSpend,totalImpressions,totalReach,totalFrequency,currency,dateStart,dateEnd,totalAds:metaRows.length,adSpend},hasLinkedin:liByName.size>0,hasHubspot:hsCustomers.size>0};
-  hideCustomers=false;
+  hideCustomers=false;filterPlatform='';
+  currentTab='all';
   excludedCompanies.clear();expandedRows.clear();chartFilter={type:null,value:null};
   Object.values(filterSel).forEach(s=>s.clear());
   populateFilters();applyFilters();
@@ -891,7 +897,7 @@ function filterMsPanel(key,q){
 }
 function renderMsBtn(key){
   const btn=document.getElementById('ms-btn-'+key);if(!btn)return;
-  const labels={industry:'Industry',country:'Country',size:'Company Size',campaign:'Campaign',adset:'Ad Set',ad:'Ad'};
+  const labels={industry:'Industry',country:'Country',size:'Company Size',campaign:'Campaign'};
   const n=filterSel[key].size;
   if(n>0){btn.className='ms-btn ms-active';btn.innerHTML=`${labels[key]||key} <span style="background:#2563eb;color:white;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:700">${n}</span> <span style="font-size:10px">▾</span>`;}
   else{btn.className='ms-btn';btn.innerHTML=`${labels[key]||key} <span style="color:#9ca3af;font-size:10px">▾</span>`;}
@@ -903,19 +909,26 @@ function populateFilters(){
   buildMsPanel('industry',[...new Set(all.map(a=>a.industry))].filter(Boolean).sort());
   buildMsPanel('country',[...new Set(all.map(a=>a.country))].filter(Boolean).sort());
   buildMsPanel('size',[...new Set(all.map(a=>a.employee_count))].filter(Boolean).sort());
-  // Grouped campaign filter: Meta / Google / LinkedIn
+  rebuildCampaignFilter();
+}
+
+function rebuildCampaignFilter(){
   const allRows=[...result.matched,...result.unmatched];
-  const metaCamps=[...new Set(result.matched.map(a=>a.campaign_name).filter(Boolean))].sort();
-  const googleCamps=[...new Set(allRows.flatMap(r=>(r.campaignEntries||[]).filter(e=>e.entryType==='google'&&e.campaignLabel).map(e=>e.campaignLabel)))].sort();
-  const liCamps=[...new Set(allRows.flatMap(r=>(r.campaignEntries||[]).filter(e=>e.entryType==='linkedin'&&e.campaignLabel).map(e=>e.campaignLabel)))].sort();
+  const pf=filterPlatform;
   const campGroups=[];
-  if(metaCamps.length)campGroups.push({header:'Meta',platform:'meta',items:metaCamps});
-  if(googleCamps.length)campGroups.push({header:'Google',platform:'google',items:googleCamps});
-  if(liCamps.length)campGroups.push({header:'LinkedIn',platform:'linkedin',items:liCamps});
+  if(!pf||pf==='meta'){
+    const metaCamps=[...new Set(result.matched.map(a=>a.campaign_name).filter(Boolean))].sort();
+    if(metaCamps.length)campGroups.push({header:'Meta',platform:'meta',items:metaCamps});
+  }
+  if(!pf||pf==='google'){
+    const googleCamps=[...new Set(allRows.flatMap(r=>(r.campaignEntries||[]).filter(e=>e.entryType==='google'&&e.campaignLabel).map(e=>e.campaignLabel)))].sort();
+    if(googleCamps.length)campGroups.push({header:'Google',platform:'google',items:googleCamps});
+  }
+  if(!pf||pf==='linkedin'){
+    const liCamps=[...new Set(allRows.flatMap(r=>(r.campaignEntries||[]).filter(e=>e.entryType==='linkedin'&&e.campaignLabel).map(e=>e.campaignLabel)))].sort();
+    if(liCamps.length)campGroups.push({header:'LinkedIn',platform:'linkedin',items:liCamps});
+  }
   buildMsPanelGrouped('campaign',campGroups);
-  buildMsPanel('adset',[...new Set(result.matched.map(a=>a.adset_name).filter(Boolean))].sort());
-  const allAdNames=[...new Set(result.matched.flatMap(a=>a.all_ad_names?a.all_ad_names.split(', '):(a.ad_name?[a.ad_name]:[])).filter(Boolean))].sort();
-  buildMsPanel('ad',allAdNames);
 }
 
 function applyFilters(){
@@ -931,6 +944,11 @@ function applyFilters(){
     if(filterSel.size.size>0&&!filterSel.size.has(row.employee_count))return false;
     if(minVisits&&(row.total_visits||0)<minVisits)return false;
     if(minViews&&(row.page_views||0)<minViews)return false;
+    // Platform filter
+    if(filterPlatform){
+      const plats=row.platforms||[];
+      if(!plats.includes(filterPlatform))return false;
+    }
     if(filterSel.campaign.size>0){
       const sel=[...filterSel.campaign];
       const metaSel=sel.filter(v=>v.startsWith('meta:')).map(v=>v.slice(5));
@@ -941,8 +959,6 @@ function applyFilters(){
       const liMatch=liSel.length&&(row.campaignEntries||[]).some(ce=>ce.entryType==='linkedin'&&liSel.includes(ce.campaignLabel));
       if(!metaMatch&&!googleMatch&&!liMatch)return false;
     }
-    if(filterSel.adset.size>0){const m=filterSel.adset.has(row.adset_name);if(!m)return false;}
-    if(filterSel.ad.size>0){const ads=row.all_ad_names?row.all_ad_names.split(', '):(row.ad_name?[row.ad_name]:[]);const m=ads.some(a=>filterSel.ad.has(a));if(!m)return false;}
     if(chartFilter.type){
       const cf=chartFilter;
       if(cf.type==='ad'){const ads=row.all_ad_names?row.all_ad_names.split(', '):(row.ad_name?[row.ad_name]:[]);if(!ads.includes(cf.value))return false;}
@@ -965,13 +981,20 @@ function applyFilters(){
   const banner=document.getElementById('chartFilterBanner');
   if(chartFilter.type){banner.classList.remove('hidden');document.getElementById('chartFilterLabel').textContent=`Filtered by ${chartFilter.type}: ${chartFilter.value}`;}
   else banner.classList.add('hidden');
-  const anyActive=search||minVisits||minViews||Object.values(filterSel).some(s=>s.size>0)||excludedCompanies.size>0||chartFilter.type;
+  const anyActive=search||minVisits||minViews||filterPlatform||Object.values(filterSel).some(s=>s.size>0)||excludedCompanies.size>0||chartFilter.type;
   const summary=document.getElementById('filterSummary');
   if(anyActive){const t=result.matched.length+result.unmatched.length;const s=filteredMatched.length+filteredUnmatched.length;summary.classList.remove('hidden');summary.textContent=`Showing ${s} of ${t} accounts`;}else summary.classList.add('hidden');
   currentPage=0;renderAll();
 }
+function changePlatformFilter(){
+  filterPlatform=document.getElementById('filterPlatform').value||'';
+  filterSel.campaign.clear();
+  rebuildCampaignFilter();
+  renderMsBtn('campaign');
+  applyFilters();
+}
 function toggleHideCustomers(){hideCustomers=!hideCustomers;const btn=document.getElementById('hideCustomersBtn');if(btn){btn.textContent=hideCustomers?'Unhide customers':'Hide customers';btn.className=hideCustomers?'px-3 py-1.5 text-sm rounded-lg border border-green-500 text-white bg-green-600 hover:bg-green-700 cursor-pointer font-medium':'px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium';}applyFilters();}
-function clearAllFilters(){hideCustomers=false;const btn=document.getElementById('hideCustomersBtn');if(btn&&btn.className.indexOf('hidden')===-1){btn.textContent='Hide customers';btn.className='px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium';}document.getElementById('filterSearch').value='';document.getElementById('filterMinVisits').value='';document.getElementById('filterMinViews').value='';Object.keys(filterSel).forEach(k=>{filterSel[k].clear();buildMsPanel(k,_msOpts[k]||[]);renderMsBtn(k);});excludedCompanies.clear();chartFilter={type:null,value:null};applyFilters();}
+function clearAllFilters(){hideCustomers=false;const btn=document.getElementById('hideCustomersBtn');if(btn&&btn.className.indexOf('hidden')===-1){btn.textContent='Hide customers';btn.className='px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium';}document.getElementById('filterSearch').value='';document.getElementById('filterMinVisits').value='';document.getElementById('filterMinViews').value='';filterPlatform='';const pfEl=document.getElementById('filterPlatform');if(pfEl)pfEl.value='';Object.keys(filterSel).forEach(k=>{filterSel[k].clear();if(_msGroups[k])buildMsPanelGrouped(k,_msGroups[k]);else buildMsPanel(k,_msOpts[k]||[]);renderMsBtn(k);});excludedCompanies.clear();chartFilter={type:null,value:null};rebuildCampaignFilter();applyFilters();}
 function clearChartFilter(){chartFilter={type:null,value:null};applyFilters();}
 function toggleChartFilter(type,value){if(chartFilter.type===type&&chartFilter.value===value)chartFilter={type:null,value:null};else chartFilter={type,value};applyFilters();}
 function toggleExclude(company){if(excludedCompanies.has(company))excludedCompanies.delete(company);else excludedCompanies.add(company);applyFilters();}
@@ -1001,15 +1024,25 @@ function renderAccountOverview(){
   const all=[...filteredMatched,...filteredUnmatched];
   const oppCount=all.filter(r=>r.isOpportunity).length;
   const custCount=all.filter(r=>r.lifecycle_stage==='customer').length;
-  const statsArr=[{l:'Total Accounts',v:all.length},{l:'Matched',v:filteredMatched.length},{l:'Unmatched',v:filteredUnmatched.length},{l:'Total Visits',v:all.reduce((s,a)=>s+(a.total_visits||0),0)}];
+  const adTouched=all.filter(r=>(r.platforms||[]).length>0).length;
+  const multiPlat=all.filter(r=>(r.platforms||[]).length>1).length;
+  const untouched=all.filter(r=>(r.platforms||[]).length===0).length;
+  const statsArr=[
+    {l:'Total Visitors',v:all.length},
+    {l:'Ad-Touched',v:adTouched,highlight:true},
+    {l:'Multi-Platform',v:multiPlat,multi:true},
+    {l:'Untouched',v:untouched},
+    {l:'Total Visits',v:all.reduce((s,a)=>s+(a.total_visits||0),0)}
+  ];
   if(result.hasLinkedin)statsArr.push({l:'Opportunities',v:oppCount,opp:true});
   if(result.hasHubspot)statsArr.push({l:'Customers',v:custCount,cust:true});
   document.getElementById('accountStats').innerHTML=statsArr.map(s=>{
-    const borderCls=s.opp?'border-amber-300 dark:border-amber-700':s.cust?'border-green-300 dark:border-green-800':'border-gray-200 dark:border-gray-700';
-    const labelCls=s.opp?'text-amber-600 dark:text-amber-400':s.cust?'text-green-700 dark:text-green-400':'text-gray-500';
-    const valCls=s.opp?'text-amber-600 dark:text-amber-400':s.cust?'text-green-700 dark:text-green-400':'';
+    const borderCls=s.opp?'border-amber-300 dark:border-amber-700':s.cust?'border-green-300 dark:border-green-800':s.highlight?'border-blue-300 dark:border-blue-700':s.multi?'border-purple-300 dark:border-purple-700':'border-gray-200 dark:border-gray-700';
+    const labelCls=s.opp?'text-amber-600 dark:text-amber-400':s.cust?'text-green-700 dark:text-green-400':s.highlight?'text-blue-600 dark:text-blue-400':s.multi?'text-purple-600 dark:text-purple-400':'text-gray-500';
+    const valCls=s.opp?'text-amber-600 dark:text-amber-400':s.cust?'text-green-700 dark:text-green-400':s.highlight?'text-blue-600 dark:text-blue-400':s.multi?'text-purple-600 dark:text-purple-400':'';
     return `<div class="bg-white dark:bg-gray-800 rounded-lg border ${borderCls} p-4"><p class="text-xs ${labelCls} font-medium uppercase tracking-wide">${s.l}</p><p class="text-2xl font-bold mt-1 ${valCls}">${s.v}</p></div>`;
   }).join('');
+  renderPlatformBreakdown(all);
   renderClickableChart('adAccountChart',buildAdMap(filteredMatched),'ad',['bg-violet-500','bg-blue-500','bg-cyan-500','bg-teal-500','bg-green-500','bg-yellow-500','bg-orange-500','bg-red-500']);
   renderClickableChart('industryChart',buildMap(all,'industry'),'industry',['bg-blue-500','bg-indigo-500','bg-purple-500','bg-pink-500','bg-red-500','bg-orange-500','bg-yellow-500','bg-green-500']);
   renderClickableChart('sizeChart',buildMap(all,'employee_count','Unknown'),'size',['bg-teal-500','bg-cyan-500','bg-emerald-500','bg-lime-500','bg-amber-500']);
@@ -1023,6 +1056,28 @@ function renderAccountOverview(){
   if(liUTMMap.size>0)renderClickableChart('linkedinCampaignChart',liUTMMap,'linkedinCampaign',['bg-blue-700','bg-blue-500','bg-blue-400','bg-indigo-500']);
 }
 
+function renderPlatformBreakdown(all){
+  const el=document.getElementById('platformBreakdownChart');
+  if(!el)return;
+  const metaOnly=all.filter(r=>{const p=r.platforms||[];return p.includes('meta')&&p.length===1;}).length;
+  const liOnly=all.filter(r=>{const p=r.platforms||[];return p.includes('linkedin')&&p.length===1;}).length;
+  const googleOnly=all.filter(r=>{const p=r.platforms||[];return p.includes('google')&&p.length===1;}).length;
+  const multi=all.filter(r=>(r.platforms||[]).length>1).length;
+  const untouched=all.filter(r=>(r.platforms||[]).length===0).length;
+  const segments=[
+    {label:'Meta only',count:metaOnly,color:'#3b82f6'},
+    {label:'LinkedIn only',count:liOnly,color:'#0A66C2'},
+    {label:'Google only',count:googleOnly,color:'#ef4444'},
+    {label:'Multi-platform',count:multi,color:'#8b5cf6'},
+    {label:'Untouched',count:untouched,color:'#d1d5db'}
+  ].filter(s=>s.count>0);
+  const total=all.length||1;
+  if(!segments.length){el.innerHTML='<p class="text-sm text-gray-400 text-center py-4">No data</p>';return;}
+  // Simple horizontal stacked bar + legend
+  const barHtml=segments.map(s=>`<div style="flex:${s.count};background:${s.color};height:100%;min-width:2px" title="${s.label}: ${s.count}"></div>`).join('');
+  const legendHtml=segments.map(s=>`<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151"><span style="width:10px;height:10px;border-radius:50%;background:${s.color};flex-shrink:0;display:inline-block"></span><span style="flex:1">${s.label}</span><span style="font-weight:700;color:#111827">${s.count}</span><span style="color:#9ca3af">${(s.count/total*100).toFixed(0)}%</span></div>`).join('');
+  el.innerHTML=`<div style="display:flex;height:24px;border-radius:12px;overflow:hidden;margin-bottom:16px">${barHtml}</div><div style="display:flex;flex-direction:column;gap:6px">${legendHtml}</div>`;
+}
 function buildAdMap(data){const m=new Map();data.forEach(r=>{const ads=r.all_ad_names?r.all_ad_names.split(', ').filter(Boolean):(r.ad_name?[r.ad_name]:[]);const seen=new Set();ads.forEach(a=>{if(!seen.has(a)){seen.add(a);m.set(a,(m.get(a)||0)+1);}});});return m;}
 function buildMap(data,key,fb){const m=new Map();data.forEach(r=>{const v=r[key]||fb||'Unknown';m.set(v,(m.get(v)||0)+1);});return m;}
 function buildCampaignSourceMap(data,sources){
@@ -1051,12 +1106,22 @@ function renderClickableChart(elId,dataMap,filterType,colors){
 }
 
 function renderTabs(){
-  const oppCount=[...filteredMatched,...filteredUnmatched].filter(r=>r.isOpportunity).length;
-  const tabs=[['matched','Matched Accounts',filteredMatched.length,false],['unmatched','Unmatched',filteredUnmatched.length,false]];
-  if(result.hasLinkedin)tabs.push(['opportunities','Opportunities',oppCount,true]);
-  document.getElementById('tabBar').innerHTML=tabs.map(([id,l,c,isOpp])=>{
+  const all=[...filteredMatched,...filteredUnmatched];
+  const metaTouched=all.filter(r=>(r.platforms||[]).includes('meta'));
+  const liTouched=all.filter(r=>(r.platforms||[]).includes('linkedin'));
+  const googleTouched=all.filter(r=>(r.platforms||[]).includes('google'));
+  const multiPlat=all.filter(r=>(r.platforms||[]).length>1);
+  const untouched=all.filter(r=>(r.platforms||[]).length===0);
+
+  const tabs=[['all','All Visitors',all.length]];
+  tabs.push(['meta-touched','Meta Touched',metaTouched.length]);
+  if(result.hasLinkedin||liTouched.length>0)tabs.push(['li-touched','LinkedIn Touched',liTouched.length]);
+  if(googleTouched.length>0)tabs.push(['google-touched','Google Touched',googleTouched.length]);
+  if(multiPlat.length>0)tabs.push(['multi-platform','Multi-Platform',multiPlat.length]);
+  tabs.push(['untouched','Untouched',untouched.length]);
+
+  document.getElementById('tabBar').innerHTML=tabs.map(([id,l,c])=>{
     const isA=currentTab===id;
-    if(isOpp)return `<button onclick="switchTab('${id}')" class="px-4 py-3 font-medium text-sm cursor-pointer border-b-2 ${isA?'border-amber-500 text-amber-600 dark:text-amber-400':'border-transparent text-gray-500 hover:text-amber-500'}">${l} <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ml-1 ${isA?'bg-amber-500 text-white':'bg-amber-100 text-amber-700'}">${c}</span></button>`;
     return `<button onclick="switchTab('${id}')" class="px-4 py-3 font-medium text-sm cursor-pointer ${isA?'tab-active':'tab-inactive'}">${l} (${c})</button>`;
   }).join('');
 }
@@ -1084,7 +1149,16 @@ function _applySortToData(data){
     return 0;
   });
 }
-function getTabData(){if(currentTab==='matched')return filteredMatched;if(currentTab==='unmatched')return filteredUnmatched;if(currentTab==='opportunities')return[...filteredMatched,...filteredUnmatched].filter(r=>r.isOpportunity);return[];}
+function getTabData(){
+  const all=[...filteredMatched,...filteredUnmatched];
+  if(currentTab==='all')return all;
+  if(currentTab==='meta-touched')return all.filter(r=>(r.platforms||[]).includes('meta'));
+  if(currentTab==='li-touched')return all.filter(r=>(r.platforms||[]).includes('linkedin'));
+  if(currentTab==='google-touched')return all.filter(r=>(r.platforms||[]).includes('google'));
+  if(currentTab==='multi-platform')return all.filter(r=>(r.platforms||[]).length>1);
+  if(currentTab==='untouched')return all.filter(r=>(r.platforms||[]).length===0);
+  return all;
+}
 function switchTab(tab){currentTab=tab;currentPage=0;expandedRows.clear();renderTabs();renderTable();}
 
 function renderTable(){
@@ -1105,7 +1179,14 @@ function renderTable(){
       if(c[0]==='company_name'){
         const oppBadge=row.isOpportunity?`<span class="opp-badge">⚡ Opportunity</span>`:'';
         const custBadge=isCustomer?`<span class="cust-badge">✓ Customer</span>`:'';
-        tbody+=`<td class="py-2.5 px-3 border-b border-gray-100 dark:border-gray-800 text-sm whitespace-nowrap font-medium">${row.company_name}${oppBadge}${custBadge}</td>`;
+        const plats=row.platforms||[];
+        const platBadges=plats.map(p=>{
+          if(p==='meta')return `<span style="display:inline-flex;align-items:center;gap:3px;background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;font-size:10px;font-weight:700;padding:1px 6px;white-space:nowrap;margin-left:4px">${ICONS.fb.replace('width="15" height="15"','width="12" height="12"')} Meta</span>`;
+          if(p==='linkedin')return `<span style="display:inline-flex;align-items:center;gap:3px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:999px;font-size:10px;font-weight:700;padding:1px 6px;white-space:nowrap;margin-left:4px">${ICONS.linkedin.replace('width="15" height="15"','width="12" height="12"')} LinkedIn</span>`;
+          if(p==='google')return `<span style="display:inline-flex;align-items:center;gap:3px;background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:999px;font-size:10px;font-weight:700;padding:1px 6px;white-space:nowrap;margin-left:4px">${ICONS.google.replace('width="15" height="15"','width="12" height="12"')} Google</span>`;
+          return '';
+        }).join('');
+        tbody+=`<td class="py-2.5 px-3 border-b border-gray-100 dark:border-gray-800 text-sm whitespace-nowrap font-medium">${row.company_name}${platBadges}${oppBadge}${custBadge}</td>`;
       }else{
         const str=String(row[c[0]]??'');
         tbody+=`<td class="py-2.5 px-3 border-b border-gray-100 dark:border-gray-800 text-sm whitespace-nowrap" title="${str.replace(/"/g,'&quot;')}">${str.length>45?str.substring(0,42)+'...':str}</td>`;
@@ -1291,9 +1372,9 @@ function nextPage(){if(currentPage<Math.ceil(getTabData().length/PAGE_SIZE)-1){c
 function exportCSV(){
   const data=getTabData();
   const baseCols=tableCols;
-  const extraCols=currentTab==='unmatched'?[['raw_campaigns','Campaigns'],['first_visit','First Visit'],['last_visit','Last Visit']]:[['campaign_name','Campaign'],['adset_name','Ad Set'],['ad_name','Ad'],['all_ad_names','All Ads'],['destinations','Pages Visited'],['first_visit','First Visit'],['last_visit','Last Visit'],['isOpportunity','Opportunity']];
+  const extraCols=[['platforms','Platforms'],['campaign_name','Campaign'],['all_ad_names','Ads'],['destinations','Pages Visited'],['first_visit','First Visit'],['last_visit','Last Visit'],['isOpportunity','Opportunity']];
   const exportCols=[...baseCols,...extraCols];
-  const csv=[exportCols.map(c=>c[1]).join(','),...data.map(row=>exportCols.map(c=>`"${String(row[c[0]]??'').replace(/"/g,'""')}"`).join(','))].join('\n');
+  const csv=[exportCols.map(c=>c[1]).join(','),...data.map(row=>exportCols.map(c=>{const v=row[c[0]];return `"${String(Array.isArray(v)?v.join(', '):(v??'')).replace(/"/g,'""')}"`;}).join(','))].join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${currentTab}-${new Date().toISOString().split('T')[0]}.csv`;document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
