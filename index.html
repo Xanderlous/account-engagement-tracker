@@ -132,7 +132,12 @@
           </div>
           <label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">API Token</label>
           <input id="snitcherApiKey" type="password" placeholder="Paste your Snitcher API token…" oninput="checkSnitcherApiReady()" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;box-sizing:border-box;outline:none;margin-bottom:4px;color:#111827">
-          <p style="font-size:10px;color:#9ca3af;margin-bottom:12px">Snitcher → Settings → API</p>
+          <p style="font-size:10px;color:#9ca3af;margin-bottom:10px">Snitcher → Settings → API</p>
+          <div id="snitcherWorkspaceLoading" style="display:none;font-size:11px;color:#6b7280;margin-bottom:8px;padding:6px 0">⏳ Loading workspaces…</div>
+          <div id="snitcherWorkspaceRow" style="display:none;margin-bottom:12px">
+            <label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">Workspace</label>
+            <select id="snitcherWorkspaceSelect" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;box-sizing:border-box;background:white;color:#111827;cursor:pointer"></select>
+          </div>
           <label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">Date Range</label>
           <select id="snitcherDatePreset" onchange="handleDatePreset()" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;box-sizing:border-box;background:white;color:#111827;margin-bottom:10px;cursor:pointer">
             <option value="7">Last 7 days</option>
@@ -386,6 +391,7 @@ function handleDatePreset(){
   const custom=document.getElementById('snitcherCustomDates');
   if(val==='custom'){custom.style.display='grid';}else{custom.style.display='none';}
 }
+let _wsDebounce=null,_loadedWsKey=null;
 function checkSnitcherApiReady(){
   const key=(document.getElementById('snitcherApiKey').value||'').trim();
   const btn=document.getElementById('snitcherFetchBtn');
@@ -393,6 +399,46 @@ function checkSnitcherApiReady(){
     btn.disabled=false;btn.style.background='#2563eb';btn.style.color='white';btn.style.cursor='pointer';
   }else{
     btn.disabled=true;btn.style.background='#e5e7eb';btn.style.color='#9ca3af';btn.style.cursor='not-allowed';
+    document.getElementById('snitcherWorkspaceRow').style.display='none';
+    document.getElementById('snitcherWorkspaceLoading').style.display='none';
+    _loadedWsKey=null;
+  }
+  clearTimeout(_wsDebounce);
+  if(key.length>15)_wsDebounce=setTimeout(()=>loadSnitcherWorkspaces(key),700);
+}
+async function loadSnitcherWorkspaces(apiKey){
+  if(_loadedWsKey===apiKey)return;
+  const loadEl=document.getElementById('snitcherWorkspaceLoading');
+  const rowEl=document.getElementById('snitcherWorkspaceRow');
+  loadEl.innerHTML='⏳ Loading workspaces…';loadEl.style.display='block';rowEl.style.display='none';
+  try{
+    const onHosted=window.location.protocol==='https:'||window.location.protocol==='http:';
+    let wsData;
+    if(onHosted){
+      const r=await fetch('/api/snitcher?path=workspaces',{headers:{'X-Snitcher-Token':apiKey,'Accept':'application/json'}});
+      if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('HTTP '+r.status+(t?' — '+t.slice(0,80):''));}
+      wsData=await r.json();
+    }else{
+      for(const fmt of[u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`]){
+        try{
+          const r=await fetch(fmt('https://api.snitcher.com/v1/workspaces'),{headers:{'Authorization':'Bearer '+apiKey,'Accept':'application/json'}});
+          if(!r.ok)throw new Error('HTTP '+r.status);
+          wsData=await r.json();break;
+        }catch(e){if(!(e instanceof TypeError))throw e;}
+      }
+    }
+    if(!wsData)throw new Error('Could not reach API — try opening in a browser');
+    const workspaces=Array.isArray(wsData)?wsData:(wsData.data?wsData.data:[wsData]);
+    const sel=document.getElementById('snitcherWorkspaceSelect');
+    sel.innerHTML=workspaces.map(ws=>{
+      const id=ws.uuid||ws.id||'';
+      const name=ws.name||(ws.domain?ws.domain:id);
+      return`<option value="${id}">${name}</option>`;
+    }).join('');
+    loadEl.style.display='none';rowEl.style.display='block';
+    _loadedWsKey=apiKey;
+  }catch(e){
+    loadEl.innerHTML='⚠️ Could not load workspaces: '+e.message;
   }
 }
 function apiOrgToSnitcherRow(org){
@@ -477,37 +523,24 @@ async function fetchFromSnitcherApi(){
     }
   };
   try{
-    // Step 1: get workspace
-    const wsData=await snFetch('workspaces');
-    const workspaces=Array.isArray(wsData)?wsData:(wsData.data?wsData.data:[wsData]);
-    if(!workspaces.length)throw new Error('No workspaces found for this token.');
-    // Try each workspace in order; skip inactive ones (403) and move to next
-    let wsId=null,allOrgs=[],lastFetchErr=null;
-    for(const ws of workspaces){
-      const id=ws.uuid||ws.id;
-      if(!id)continue;
-      try{
-        const orgsAll=[];
-        let page=1,lastPage=1;
-        do{
-          const qp={per_page:100,page};
-          if(dateFrom)qp.date_from=dateFrom;
-          if(dateTo)qp.date_to=dateTo;
-          btn.textContent='Fetching…';
-          status.textContent='Fetching page '+page+(lastPage>1?' of '+lastPage:'')+(workspaces.length>1?' — '+(ws.name||id):'')+'…';
-          const data=await snFetch('workspaces/'+id+'/organisations',qp);
-          const orgs=data.data||data.organisations||(Array.isArray(data)?data:[]);
-          orgsAll.push(...orgs);
-          lastPage=data.last_page||data.total_pages||1;
-          page++;
-        }while(page<=lastPage);
-        wsId=id;allOrgs=orgsAll;break;
-      }catch(e){
-        lastFetchErr=e;
-        if(!e.message.startsWith('HTTP 403')&&!e.message.startsWith('HTTP 404'))throw e;
-      }
-    }
-    if(!wsId)throw lastFetchErr||new Error('No active workspace found for this token.');
+    // Use workspace selected by user in the dropdown
+    const wsId=document.getElementById('snitcherWorkspaceSelect').value;
+    if(!wsId)throw new Error('No workspace selected — please wait for workspaces to load, then pick one.');
+    // Paginate companies for selected workspace
+    const allOrgs=[];
+    let page=1,lastPage=1;
+    do{
+      const qp={per_page:100,page};
+      if(dateFrom)qp.date_from=dateFrom;
+      if(dateTo)qp.date_to=dateTo;
+      btn.textContent='Fetching…';
+      status.textContent='Fetching page '+page+(lastPage>1?' of '+lastPage:'')+'…';
+      const data=await snFetch('workspaces/'+wsId+'/organisations',qp);
+      const orgs=data.data||data.organisations||(Array.isArray(data)?data:[]);
+      allOrgs.push(...orgs);
+      lastPage=data.last_page||data.total_pages||1;
+      page++;
+    }while(page<=lastPage);
     // Step 3: convert
     snitcherApiRows=allOrgs.map(apiOrgToSnitcherRow);
     snitcherFile=null; // clear any CSV
