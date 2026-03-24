@@ -113,7 +113,7 @@
         <!-- Tab header -->
         <div style="display:flex;border-bottom:1px solid #e5e7eb;background:white">
           <button id="snitcher-tab-csv-btn" onclick="switchSnitcherTab('csv')" style="flex:1;padding:8px 0;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;border:none;border-bottom:2px solid #2563eb;color:#2563eb;cursor:pointer;background:transparent">CSV Upload</button>
-          <button id="snitcher-tab-api-btn" onclick="switchSnitcherTab('api')" style="flex:1;padding:8px 0;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;border:none;border-bottom:2px solid transparent;color:#9ca3af;cursor:pointer;background:transparent">Connect API</button>
+          <button id="snitcher-tab-api-btn" disabled style="flex:1;padding:8px 0;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;border:none;border-bottom:2px solid transparent;color:#d1d5db;cursor:not-allowed;background:transparent;opacity:0.7">Connect API <span style="font-size:9px;background:#e5e7eb;color:#9ca3af;padding:1px 5px;border-radius:9px;vertical-align:middle;font-weight:600;letter-spacing:0">Soon</span></button>
         </div>
         <!-- CSV Tab -->
         <div id="snitcherCsvTab" onclick="document.getElementById('snitcherInput').click()" class="p-7 text-center cursor-pointer transition-all hover:bg-blue-50/30" ondragover="event.preventDefault();document.getElementById('snitcherDropZone').classList.add('border-blue-600')" ondragleave="document.getElementById('snitcherDropZone').classList.remove('border-blue-600')" ondrop="handleDrop(event,'snitcher')">
@@ -157,20 +157,20 @@
         </div>
       </div>
       <!-- LinkedIn -->
-      <div id="linkedinDropZone" onclick="document.getElementById('linkedinInput').click()" class="rounded-lg border-2 border-dashed border-blue-200 dark:border-blue-800 p-7 text-center cursor-pointer transition-all hover:border-blue-400 bg-blue-50/30 dark:bg-blue-950/20" ondragover="event.preventDefault();this.classList.add('border-blue-600','bg-blue-50')" ondragleave="this.classList.remove('border-blue-600','bg-blue-50')" ondrop="handleDrop(event,'linkedin')">
+      <div id="linkedinDropZone" class="rounded-lg border-2 border-dashed border-gray-200 p-7 text-center bg-gray-50/50 opacity-50 select-none" style="pointer-events:none">
         <input id="linkedinInput" type="file" accept=".csv,.tsv" class="hidden" onchange="handleFile(this,'linkedin')">
         <div id="linkedinPlaceholder">
           <img src="data:image/png;base64,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" class="w-11 h-11 mx-auto mb-3" style="object-fit:contain">
-          <p class="font-semibold">LinkedIn Company Export</p><p class="text-xs text-blue-500 mt-1">Optional — enables opportunity detection</p>
+          <p class="font-semibold text-gray-400">LinkedIn Company Export</p><p class="text-xs text-gray-400 mt-1">Coming soon</p>
         </div>
         <div id="linkedinSelected" class="hidden"><svg class="w-10 h-10 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p id="linkedinFileName" class="font-semibold text-sm"></p><p id="linkedinFileSize" class="text-xs text-gray-500"></p></div>
       </div>
       <!-- HubSpot CRM -->
-      <div id="hubspotDropZone" onclick="document.getElementById('hubspotInput').click()" class="rounded-lg border-2 border-dashed border-orange-200 dark:border-orange-800 p-7 text-center cursor-pointer transition-all hover:border-orange-400 bg-orange-50/30 dark:bg-orange-950/20" ondragover="event.preventDefault();this.classList.add('border-orange-500','bg-orange-50')" ondragleave="this.classList.remove('border-orange-500','bg-orange-50')" ondrop="handleDrop(event,'hubspot')">
+      <div id="hubspotDropZone" class="rounded-lg border-2 border-dashed border-gray-200 p-7 text-center bg-gray-50/50 opacity-50 select-none" style="pointer-events:none">
         <input id="hubspotInput" type="file" accept=".csv,.tsv" class="hidden" onchange="handleFile(this,'hubspot')">
         <div id="hubspotPlaceholder">
 
-          <p class="font-semibold">(HubSpot) CRM Export</p><p class="text-xs text-orange-500 mt-1">Optional — flags existing customers</p>
+          <p class="font-semibold text-gray-400">(HubSpot) CRM Export</p><p class="text-xs text-gray-400 mt-1">Coming soon</p>
         </div>
         <div id="hubspotSelected" class="hidden"><svg class="w-10 h-10 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p id="hubspotFileName" class="font-semibold text-sm"></p><p id="hubspotFileSize" class="text-xs text-gray-500"></p></div>
       </div>
@@ -277,6 +277,7 @@
       </div>
 
       <select id="filterMinVisits" class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" onchange="applyFilters()"><option value="">Min Visits</option><option value="2">2+</option><option value="3">3+</option><option value="5">5+</option><option value="10">10+</option></select>
+      <select id="filterMinViews" class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" onchange="applyFilters()"><option value="">Min Views</option><option value="1">1+</option><option value="5">5+</option><option value="10">10+</option><option value="25">25+</option><option value="50">50+</option></select>
       <button id="hideCustomersBtn" onclick="toggleHideCustomers()" class="hidden px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium">Hide customers</button>
       <button onclick="clearAllFilters()" class="ml-auto px-3 py-1.5 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 cursor-pointer">Clear all</button>
     </div>
@@ -920,6 +921,7 @@ function populateFilters(){
 function applyFilters(){
   const search=document.getElementById('filterSearch').value.toLowerCase().trim();
   const minVisits=parseInt(document.getElementById('filterMinVisits').value)||0;
+  const minViews=parseInt(document.getElementById('filterMinViews').value)||0;
   function passes(row){
     if(excludedCompanies.has(row.company_name))return false;
     if(hideCustomers&&row.lifecycle_stage==='customer')return false;
@@ -928,6 +930,7 @@ function applyFilters(){
     if(filterSel.country.size>0&&!filterSel.country.has(row.country))return false;
     if(filterSel.size.size>0&&!filterSel.size.has(row.employee_count))return false;
     if(minVisits&&(row.total_visits||0)<minVisits)return false;
+    if(minViews&&(row.page_views||0)<minViews)return false;
     if(filterSel.campaign.size>0){
       const sel=[...filterSel.campaign];
       const metaSel=sel.filter(v=>v.startsWith('meta:')).map(v=>v.slice(5));
@@ -962,13 +965,13 @@ function applyFilters(){
   const banner=document.getElementById('chartFilterBanner');
   if(chartFilter.type){banner.classList.remove('hidden');document.getElementById('chartFilterLabel').textContent=`Filtered by ${chartFilter.type}: ${chartFilter.value}`;}
   else banner.classList.add('hidden');
-  const anyActive=search||minVisits||Object.values(filterSel).some(s=>s.size>0)||excludedCompanies.size>0||chartFilter.type;
+  const anyActive=search||minVisits||minViews||Object.values(filterSel).some(s=>s.size>0)||excludedCompanies.size>0||chartFilter.type;
   const summary=document.getElementById('filterSummary');
   if(anyActive){const t=result.matched.length+result.unmatched.length;const s=filteredMatched.length+filteredUnmatched.length;summary.classList.remove('hidden');summary.textContent=`Showing ${s} of ${t} accounts`;}else summary.classList.add('hidden');
   currentPage=0;renderAll();
 }
 function toggleHideCustomers(){hideCustomers=!hideCustomers;const btn=document.getElementById('hideCustomersBtn');if(btn){btn.textContent=hideCustomers?'Unhide customers':'Hide customers';btn.className=hideCustomers?'px-3 py-1.5 text-sm rounded-lg border border-green-500 text-white bg-green-600 hover:bg-green-700 cursor-pointer font-medium':'px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium';}applyFilters();}
-function clearAllFilters(){hideCustomers=false;const btn=document.getElementById('hideCustomersBtn');if(btn&&btn.className.indexOf('hidden')===-1){btn.textContent='Hide customers';btn.className='px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium';}document.getElementById('filterSearch').value='';document.getElementById('filterMinVisits').value='';Object.keys(filterSel).forEach(k=>{filterSel[k].clear();buildMsPanel(k,_msOpts[k]||[]);renderMsBtn(k);});excludedCompanies.clear();chartFilter={type:null,value:null};applyFilters();}
+function clearAllFilters(){hideCustomers=false;const btn=document.getElementById('hideCustomersBtn');if(btn&&btn.className.indexOf('hidden')===-1){btn.textContent='Hide customers';btn.className='px-3 py-1.5 text-sm rounded-lg border border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 cursor-pointer font-medium';}document.getElementById('filterSearch').value='';document.getElementById('filterMinVisits').value='';document.getElementById('filterMinViews').value='';Object.keys(filterSel).forEach(k=>{filterSel[k].clear();buildMsPanel(k,_msOpts[k]||[]);renderMsBtn(k);});excludedCompanies.clear();chartFilter={type:null,value:null};applyFilters();}
 function clearChartFilter(){chartFilter={type:null,value:null};applyFilters();}
 function toggleChartFilter(type,value){if(chartFilter.type===type&&chartFilter.value===value)chartFilter={type:null,value:null};else chartFilter={type,value};applyFilters();}
 function toggleExclude(company){if(excludedCompanies.has(company))excludedCompanies.delete(company);else excludedCompanies.add(company);applyFilters();}
@@ -1058,15 +1061,37 @@ function renderTabs(){
   }).join('');
 }
 
+let _sortCol=null,_sortDir=1; // null=unsorted, dir 1=asc -1=desc
 const tableCols=[['company_name','Company'],['industry','Industry'],['employee_count','Size'],['country','Country'],['page_views','Views'],['total_visits','Visits']];
+const _sortableTypes={company_name:'str',industry:'str',employee_count:'size',country:'str',page_views:'num',total_visits:'num'};
+const _sizeOrder={'1-10 employees':1,'1-10':1,'11-50 employees':2,'11-50':2,'51-200 employees':3,'51-200':3,'201-500 employees':4,'201-500':4,'501-1000 employees':5,'501-1000':5,'1001-5000 employees':6,'1001-5000':6,'5001-10000 employees':7,'5001-10000':7,'10001+ employees':8,'10001+':8};
+function _sortVal(row,col){
+  const t=_sortableTypes[col]||'str';
+  if(t==='num')return Number(row[col])||0;
+  if(t==='size'){const v=(row[col]||'').toLowerCase().trim();return _sizeOrder[v]||_sizeOrder[row[col]]||0;}
+  return(row[col]||'').toString().toLowerCase();
+}
+function sortColumn(col){
+  if(_sortCol===col){_sortDir*=-1;}else{_sortCol=col;_sortDir=1;}
+  currentPage=0;renderTable();
+}
+function _applySortToData(data){
+  if(!_sortCol)return data;
+  return [...data].sort((a,b)=>{
+    const av=_sortVal(a,_sortCol),bv=_sortVal(b,_sortCol);
+    if(av<bv)return -1*_sortDir;
+    if(av>bv)return 1*_sortDir;
+    return 0;
+  });
+}
 function getTabData(){if(currentTab==='matched')return filteredMatched;if(currentTab==='unmatched')return filteredUnmatched;if(currentTab==='opportunities')return[...filteredMatched,...filteredUnmatched].filter(r=>r.isOpportunity);return[];}
 function switchTab(tab){currentTab=tab;currentPage=0;expandedRows.clear();renderTabs();renderTable();}
 
 function renderTable(){
-  const data=getTabData();
+  const data=_applySortToData(getTabData());
   const start=currentPage*PAGE_SIZE,pageData=data.slice(start,start+PAGE_SIZE);
   const colSpan=tableCols.length+2;
-  document.getElementById('tableHead').innerHTML='<tr><th class="py-3 px-2 border-b border-gray-200 dark:border-gray-700 w-6"></th><th class="py-3 px-2 border-b border-gray-200 dark:border-gray-700 w-6"></th>'+tableCols.map(c=>`<th class="text-left py-3 px-3 border-b border-gray-200 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider whitespace-nowrap">${c[1]}</th>`).join('')+'</tr>';
+  document.getElementById('tableHead').innerHTML='<tr><th class="py-3 px-2 border-b border-gray-200 dark:border-gray-700 w-6"></th><th class="py-3 px-2 border-b border-gray-200 dark:border-gray-700 w-6"></th>'+tableCols.map(c=>{const isSorted=_sortCol===c[0];const arrow=isSorted?(_sortDir===1?' ↑':' ↓'):'';const activeStyle=isSorted?'color:#2563eb;':'';return`<th class="text-left py-3 px-3 border-b border-gray-200 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider whitespace-nowrap" style="cursor:pointer;user-select:none;${activeStyle}" onclick="sortColumn('${c[0]}')" title="Sort by ${c[1]}">${c[1]}<span style="font-size:10px;opacity:0.7">${arrow}</span></th>`;}).join('')+'</tr>';
   let tbody='';
   for(const row of pageData){
     const isExp=expandedRows.has(row.company_name),ex=excludedCompanies.has(row.company_name);
