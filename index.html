@@ -541,7 +541,14 @@ async function fetchFromSnitcherApi(){
       lastPage=data.last_page||data.total_pages||1;
       page++;
     }while(page<=lastPage);
-    // Step 3: convert
+    // Step 3: convert — show raw first record on screen for field-name debugging
+    if(allOrgs.length>0){
+      console.log('[Snitcher raw org]',JSON.stringify(allOrgs[0],null,2));
+      status.style.color='#374151';
+      status.style.display='block';
+      status.innerHTML='<strong>Raw API record (first company) — paste this to Claude:</strong><br><pre style="font-size:10px;text-align:left;white-space:pre-wrap;background:#f3f4f6;padding:8px;border-radius:6px;max-height:300px;overflow:auto;margin-top:6px">'+JSON.stringify(allOrgs[0],null,2).replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</pre>';
+      return; // pause here so user can see the raw data
+    }
     snitcherApiRows=allOrgs.map(apiOrgToSnitcherRow);
     snitcherFile=null; // clear any CSV
     // Step 4: update UI
