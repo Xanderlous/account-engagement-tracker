@@ -481,23 +481,33 @@ async function fetchFromSnitcherApi(){
     const wsData=await snFetch('workspaces');
     const workspaces=Array.isArray(wsData)?wsData:(wsData.data?wsData.data:[wsData]);
     if(!workspaces.length)throw new Error('No workspaces found for this token.');
-    const wsId=workspaces[0].uuid||workspaces[0].id;
-    // Step 2: paginate companies
-    const allOrgs=[];
-    let page=1,lastPage=1;
-    do{
-      const qp={per_page:100,page};
-      if(dateFrom)qp.date_from=dateFrom;
-      if(dateTo)qp.date_to=dateTo;
-      btn.textContent='Fetching…';
-      status.textContent='Fetching page '+page+(lastPage>1?' of '+lastPage:'')+'…';
-      const data=await snFetch('workspaces/'+wsId+'/organisations',qp);
-      const orgs=data.data||data.organisations||(Array.isArray(data)?data:[]);
-
-      allOrgs.push(...orgs);
-      lastPage=data.last_page||data.total_pages||1;
-      page++;
-    }while(page<=lastPage);
+    // Try each workspace in order; skip inactive ones (403) and move to next
+    let wsId=null,allOrgs=[],lastFetchErr=null;
+    for(const ws of workspaces){
+      const id=ws.uuid||ws.id;
+      if(!id)continue;
+      try{
+        const orgsAll=[];
+        let page=1,lastPage=1;
+        do{
+          const qp={per_page:100,page};
+          if(dateFrom)qp.date_from=dateFrom;
+          if(dateTo)qp.date_to=dateTo;
+          btn.textContent='Fetching…';
+          status.textContent='Fetching page '+page+(lastPage>1?' of '+lastPage:'')+(workspaces.length>1?' — '+(ws.name||id):'')+'…';
+          const data=await snFetch('workspaces/'+id+'/organisations',qp);
+          const orgs=data.data||data.organisations||(Array.isArray(data)?data:[]);
+          orgsAll.push(...orgs);
+          lastPage=data.last_page||data.total_pages||1;
+          page++;
+        }while(page<=lastPage);
+        wsId=id;allOrgs=orgsAll;break;
+      }catch(e){
+        lastFetchErr=e;
+        if(!e.message.startsWith('HTTP 403')&&!e.message.startsWith('HTTP 404'))throw e;
+      }
+    }
+    if(!wsId)throw lastFetchErr||new Error('No active workspace found for this token.');
     // Step 3: convert
     snitcherApiRows=allOrgs.map(apiOrgToSnitcherRow);
     snitcherFile=null; // clear any CSV
