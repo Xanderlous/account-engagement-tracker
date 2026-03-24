@@ -443,28 +443,34 @@ async function fetchFromSnitcherApi(){
   const status=document.getElementById('snitcherApiStatus');
   btn.disabled=true;btn.style.background='#6b7280';btn.style.color='white';btn.textContent='Connecting…';
   status.style.display='block';status.style.color='#6b7280';status.textContent='Connecting to Snitcher…';
-  const headers={'Authorization':'Bearer '+apiKey,'Accept':'application/json'};
+  // Route through corsproxy.io — a free open-source CORS relay so this works
+  // in any browser without a server. Each user supplies their own API key.
+  const CORS='https://corsproxy.io/?';
+  const snFetch=async(path,qp={})=>{
+    const u=new URL('https://api.snitcher.com/v1/'+path);
+    for(const[k,v]of Object.entries(qp))u.searchParams.set(k,String(v));
+    const r=await fetch(CORS+encodeURIComponent(u.toString()),{headers:{'Authorization':'Bearer '+apiKey,'Accept':'application/json'}});
+    if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(r.status+(t?' — '+t.slice(0,120):''));}
+    return r.json();
+  };
   try{
     // Step 1: get workspace
-    const wsResp=await fetch('https://api.snitcher.com/v1/workspaces',{headers});
-    if(!wsResp.ok)throw new Error('Auth failed ('+wsResp.status+'). Check your API token.');
-    const wsData=await wsResp.json();
+    const wsData=await snFetch('workspaces');
     const workspaces=Array.isArray(wsData)?wsData:(wsData.data?wsData.data:[wsData]);
-    if(!workspaces.length)throw new Error('No workspaces found.');
+    if(!workspaces.length)throw new Error('No workspaces found for this token.');
     const wsId=workspaces[0].id;
     // Step 2: paginate companies
     const allOrgs=[];
     let page=1,lastPage=1;
     do{
-      const params=new URLSearchParams({per_page:100,page});
-      if(dateFrom)params.set('date_from',dateFrom);
-      if(dateTo)params.set('date_to',dateTo);
+      const qp={per_page:100,page};
+      if(dateFrom)qp.date_from=dateFrom;
+      if(dateTo)qp.date_to=dateTo;
       btn.textContent='Fetching…';
       status.textContent='Fetching page '+page+(lastPage>1?' of '+lastPage:'')+'…';
-      const resp=await fetch('https://api.snitcher.com/v1/workspaces/'+wsId+'/organisations?'+params,{headers});
-      if(!resp.ok)throw new Error('API error ('+resp.status+')');
-      const data=await resp.json();
+      const data=await snFetch('workspaces/'+wsId+'/organisations',qp);
       const orgs=data.data||data.organisations||(Array.isArray(data)?data:[]);
+
       allOrgs.push(...orgs);
       lastPage=data.last_page||data.total_pages||1;
       page++;
