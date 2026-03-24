@@ -442,33 +442,55 @@ async function loadSnitcherWorkspaces(apiKey){
   }
 }
 function apiOrgToSnitcherRow(org){
-  const loc=org.location||{};
-  const country=loc.country||org.country||'';
-  const state=loc.state||org.state||'';
-  const city=loc.city||org.city||'';
+  // Field names confirmed from live API response
+  const addr=org.address||{};
+  const country=addr.country||'';
+  const state=addr.state||'';
+  const city=addr.city||'';
   const arr2str=(v,sep)=>Array.isArray(v)?v.join(sep):(v||'');
-  const campaigns=arr2str(org.unique_campaigns||org.campaigns,', ');
-  const pages=arr2str(org.unique_pages||org.pages,', ');
-  const referrers=arr2str(org.all_referrers||org.referrers,', ');
-  const locs=arr2str(org.unique_locations||org.visitor_locations,' | ');
+  // Convert referrer URLs to recognisable source names for channel icons
+  const refToSrc=(url)=>{
+    if(!url)return'direct';
+    try{
+      const h=new URL(url).hostname.replace(/^www\./,'').toLowerCase();
+      if(h.includes('google.'))return'google';
+      if(h.includes('bing.'))return'bing';
+      if(h.includes('facebook.')||h==='fb.com')return'fb';
+      if(h.includes('instagram.'))return'ig';
+      if(h.includes('linkedin.'))return'linkedin';
+      if(h.includes('twitter.')||h==='t.co'||h.includes('x.com'))return'twitter';
+      if(h.includes('youtube.'))return'youtube';
+      return'referral';
+    }catch{return'referral';}
+  };
+  // Build campaigns string: prefer actual campaigns, fall back to referrer-derived sources
+  let campaignsStr='';
+  if(Array.isArray(org.campaigns)&&org.campaigns.length){
+    campaignsStr=org.campaigns.join(', ');
+  }else if(Array.isArray(org.referrers)&&org.referrers.length){
+    const sources=[...new Set(org.referrers.map(refToSrc))];
+    campaignsStr=sources.map(s=>s+' - organic').join(', ');
+  }
+  const pages=arr2str(org.pages_visited,', ');
+  const referrers=arr2str(org.referrers,', ');
   return{
-    'ID':String(org.id||''),
+    'ID':String(org.uuid||''),
     'Name':org.name||'',
     'Location':[city,state,country].filter(Boolean).join(', '),
     'Country':country,'State':state,'City':city,
     'Industry':org.industry||'',
-    'Company Size':org.employee_count||org.size||org.company_size||'',
-    'First visit':org.first_seen||org.first_visit||'',
-    'Last visit':org.last_seen||org.last_visit||'',
+    'Company Size':org.size||'',
+    'First visit':org.first_seen||'',
+    'Last visit':org.last_seen||'',
     'Website':org.website||'',
     'Phone':org.phone||'',
-    'Total Visits':String(org.total_sessions||org.total_visits||org.sessions_count||0),
-    'Total Pageviews':String(org.total_pageviews||org.pageviews_count||0),
+    'Total Visits':String(org.total_sessions||0),
+    'Total Pageviews':String(org.total_pageviews||0),
     'Unique pages Visited':pages,
     'Total time on Site':org.time_on_site||'',
     'All Referrers':referrers,
-    'Unique Campaigns':campaigns,
-    'Unique Visitor Locations':locs,
+    'Unique Campaigns':campaignsStr,
+    'Unique Visitor Locations':'',
   };
 }
 async function fetchFromSnitcherApi(){
@@ -541,14 +563,7 @@ async function fetchFromSnitcherApi(){
       lastPage=data.last_page||data.total_pages||1;
       page++;
     }while(page<=lastPage);
-    // Step 3: convert — show raw first record on screen for field-name debugging
-    if(allOrgs.length>0){
-      console.log('[Snitcher raw org]',JSON.stringify(allOrgs[0],null,2));
-      status.style.color='#374151';
-      status.style.display='block';
-      status.innerHTML='<strong>Raw API record (first company) — paste this to Claude:</strong><br><pre style="font-size:10px;text-align:left;white-space:pre-wrap;background:#f3f4f6;padding:8px;border-radius:6px;max-height:300px;overflow:auto;margin-top:6px">'+JSON.stringify(allOrgs[0],null,2).replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</pre>';
-      return; // pause here so user can see the raw data
-    }
+    // Step 3: convert
     snitcherApiRows=allOrgs.map(apiOrgToSnitcherRow);
     snitcherFile=null; // clear any CSV
     // Step 4: update UI
