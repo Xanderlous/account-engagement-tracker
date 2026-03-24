@@ -443,30 +443,38 @@ async function fetchFromSnitcherApi(){
   const status=document.getElementById('snitcherApiStatus');
   btn.disabled=true;btn.style.background='#6b7280';btn.style.color='white';btn.textContent='Connecting…';
   status.style.display='block';status.style.color='#6b7280';status.textContent='Connecting to Snitcher…';
-  // Route through a CORS relay so this works from any browser / file:// URL.
-  // Tries multiple proxies in order; falls back with a clear message if all fail.
-  const PROXIES=[
-    u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,   // current documented format
-    u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,       // legacy format (fallback)
-    u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, // no-auth fallback
-  ];
+  // Routing strategy:
+  // • On any http/https origin (Vercel, local server): use /api/snitcher serverless proxy
+  // • On file:// (opened directly from disk): fall back to corsproxy.io public relay
+  const onHosted=window.location.protocol==='https:'||window.location.protocol==='http:';
   const snFetch=async(path,qp={})=>{
-    const u=new URL('https://api.snitcher.com/v1/'+path);
-    for(const[k,v]of Object.entries(qp))u.searchParams.set(k,String(v));
-    const target=u.toString();
-    let lastErr=null;
-    for(let i=0;i<PROXIES.length;i++){
-      try{
-        const r=await fetch(PROXIES[i](target),{headers:{'Authorization':'Bearer '+apiKey,'Accept':'application/json'}});
-        if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('HTTP '+r.status+(t?' — '+t.slice(0,160):''));}
-        return r.json();
-      }catch(e){
-        lastErr=e;
-        // Only retry on network errors (TypeError), not on HTTP errors
-        if(!(e instanceof TypeError))throw e;
+    if(onHosted){
+      // Vercel serverless proxy — runs server-side, no browser CORS restrictions
+      const proxyUrl=new URL('/api/snitcher',window.location.origin);
+      proxyUrl.searchParams.set('path',path);
+      for(const[k,v]of Object.entries(qp))proxyUrl.searchParams.set(k,String(v));
+      const r=await fetch(proxyUrl.toString(),{headers:{'X-Snitcher-Token':apiKey,'Accept':'application/json'}});
+      if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('HTTP '+r.status+(t?' — '+t.slice(0,160):''));}
+      return r.json();
+    }else{
+      // file:// fallback: try public CORS relays
+      const u=new URL('https://api.snitcher.com/v1/'+path);
+      for(const[k,v]of Object.entries(qp))u.searchParams.set(k,String(v));
+      const target=u.toString();
+      const PROXIES=[
+        u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+        u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
+      ];
+      let lastErr=null;
+      for(const fmt of PROXIES){
+        try{
+          const r=await fetch(fmt(target),{headers:{'Authorization':'Bearer '+apiKey,'Accept':'application/json'}});
+          if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('HTTP '+r.status+(t?' — '+t.slice(0,160):''));}
+          return r.json();
+        }catch(e){lastErr=e;if(!(e instanceof TypeError))throw e;}
       }
+      throw new TypeError('__PROXY_FAIL__');
     }
-    throw new TypeError('__PROXY_FAIL__');
   };
   try{
     // Step 1: get workspace
