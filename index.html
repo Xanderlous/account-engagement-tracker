@@ -443,15 +443,30 @@ async function fetchFromSnitcherApi(){
   const status=document.getElementById('snitcherApiStatus');
   btn.disabled=true;btn.style.background='#6b7280';btn.style.color='white';btn.textContent='Connecting…';
   status.style.display='block';status.style.color='#6b7280';status.textContent='Connecting to Snitcher…';
-  // Route through corsproxy.io — a free open-source CORS relay so this works
-  // in any browser without a server. Each user supplies their own API key.
-  const CORS='https://corsproxy.io/?';
+  // Route through a CORS relay so this works from any browser / file:// URL.
+  // Tries multiple proxies in order; falls back with a clear message if all fail.
+  const PROXIES=[
+    u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`,   // current documented format
+    u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,       // legacy format (fallback)
+    u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, // no-auth fallback
+  ];
   const snFetch=async(path,qp={})=>{
     const u=new URL('https://api.snitcher.com/v1/'+path);
     for(const[k,v]of Object.entries(qp))u.searchParams.set(k,String(v));
-    const r=await fetch(CORS+encodeURIComponent(u.toString()),{headers:{'Authorization':'Bearer '+apiKey,'Accept':'application/json'}});
-    if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(r.status+(t?' — '+t.slice(0,120):''));}
-    return r.json();
+    const target=u.toString();
+    let lastErr=null;
+    for(let i=0;i<PROXIES.length;i++){
+      try{
+        const r=await fetch(PROXIES[i](target),{headers:{'Authorization':'Bearer '+apiKey,'Accept':'application/json'}});
+        if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('HTTP '+r.status+(t?' — '+t.slice(0,160):''));}
+        return r.json();
+      }catch(e){
+        lastErr=e;
+        // Only retry on network errors (TypeError), not on HTTP errors
+        if(!(e instanceof TypeError))throw e;
+      }
+    }
+    throw new TypeError('__PROXY_FAIL__');
   };
   try{
     // Step 1: get workspace
@@ -488,7 +503,22 @@ async function fetchFromSnitcherApi(){
     checkReady();
   }catch(err){
     status.style.color='#dc2626';
-    status.textContent='Error: '+err.message;
+    if(err.message==='__PROXY_FAIL__'){
+      status.innerHTML=
+        '<strong>Cannot reach Snitcher API.</strong><br>'+
+        '<span style="color:#374151;font-size:11px;line-height:1.7">'+
+        'This preview is sandboxed and blocks network requests.<br>'+
+        '👉 <strong>Open the file directly in Arc or Chrome</strong> — locate it in Finder '+
+        'and double-click, or drag it into a browser tab. The API fetch will work from there.<br>'+
+        'Alternatively use the CSV upload tab instead.</span>';
+    }else{
+      const lines=err.message.split('\n');
+      if(lines.length>1){
+        status.innerHTML='<strong>Error:</strong> '+lines[0]+'<br><small style="opacity:0.85">'+lines.slice(1).join('<br>')+'</small>';
+      }else{
+        status.textContent='Error: '+err.message;
+      }
+    }
     btn.disabled=false;btn.style.background='#2563eb';btn.style.color='white';btn.textContent='Retry';
   }
 }
