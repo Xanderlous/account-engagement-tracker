@@ -481,7 +481,7 @@ async function fetchFromSnitcherApi(){
     const wsData=await snFetch('workspaces');
     const workspaces=Array.isArray(wsData)?wsData:(wsData.data?wsData.data:[wsData]);
     if(!workspaces.length)throw new Error('No workspaces found for this token.');
-    const wsId=workspaces[0].id;
+    const wsId=workspaces[0].uuid||workspaces[0].id;
     // Step 2: paginate companies
     const allOrgs=[];
     let page=1,lastPage=1;
